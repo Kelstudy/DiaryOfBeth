@@ -168,6 +168,8 @@
     var followers = latest.profile.followersCount;
     var accountReach = latest.summary.accountReachSummed;
     var accountReachWindowDays = latest.summary.accountReachWindowDays;
+    var profileViews = latest.summary.profileViews;
+    var profileViewsWindowDays = latest.summary.profileViewsWindowDays;
 
     container.appendChild(
       buildStatTile("Followers", formatFullNumber(followers), function (tile) {
@@ -203,6 +205,20 @@
         tile.appendChild(note);
         if (previous && previous.summary.accountReachSummed != null) {
           renderDelta(tile, accountReach, previous.summary.accountReachSummed, true, formatCompactNumber);
+        }
+      })
+    );
+
+    container.appendChild(
+      buildStatTile("Profile views", profileViews === null || profileViews === undefined ? "—" : formatCompactNumber(profileViews), function (tile) {
+        var note = document.createElement("p");
+        note.className = "stat-delta flat";
+        note.textContent = profileViewsWindowDays
+          ? "As pulled, last " + profileViewsWindowDays + " day" + (profileViewsWindowDays === 1 ? "" : "s")
+          : "As pulled";
+        tile.appendChild(note);
+        if (previous && previous.summary.profileViews != null) {
+          renderDelta(tile, profileViews, previous.summary.profileViews, true, formatCompactNumber);
         }
       })
     );

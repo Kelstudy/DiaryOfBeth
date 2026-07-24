@@ -236,6 +236,44 @@ def pullAccountReachLastNDays(accessToken, userId, days):
     return totalReach, None
 
 
+def pullAccountProfileViewsLastNDays(accessToken, userId, days):
+    """
+    Pull the total number of profile visits over the last N days.
+
+    Unlike reach, profile_views is a "total value" metric on this API - it
+    does not support a period=day time series and instead requires
+    metric_type=total_value, returning one already-summed number rather
+    than a list of daily values to add up (confirmed via live testing
+    against this account; a plain period=day request returns an empty
+    data array with no error).
+    """
+    untilTime = int(time.time())
+    sinceTime = untilTime - (days * 24 * 60 * 60)
+
+    response = requests.get(
+        f"{BASE_URL}/{userId}/insights",
+        params={
+            "metric": "profile_views",
+            "period": "day",
+            "metric_type": "total_value",
+            "since": sinceTime,
+            "until": untilTime,
+            "access_token": accessToken,
+        },
+    )
+
+    if not response.ok:
+        return None, response.json().get("error", {}).get("message", response.text)
+
+    responseData = response.json().get("data", [{}])
+    if not responseData:
+        return None, "No profile_views data returned"
+
+    totalProfileViews = responseData[0].get("total_value", {}).get("value", 0)
+
+    return totalProfileViews, None
+
+
 def isAtOrAfter(isoTimestamp, cutoffDate):
     """Check whether a post's timestamp falls at or after cutoffDate."""
     try:

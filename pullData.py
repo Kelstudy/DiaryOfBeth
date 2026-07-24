@@ -40,6 +40,7 @@ from igApi import (
     pullMediaWithinLastNDays,
     pullMediaSinceDate,
     pullAccountReachLastNDays,
+    pullAccountProfileViewsLastNDays,
     calculateEngagementRate,
     DEFAULT_POST_COUNT,
 )
@@ -168,6 +169,11 @@ def buildSnapshot(accessToken, userId, pullMode, pullValue):
     pulledSetSummary["accountReachWindowDays"] = reachWindowDays
     pulledSetSummary["accountReachSummed"] = totalAccountReach
     pulledSetSummary["accountReachError"] = reachError
+
+    totalProfileViews, profileViewsError = pullAccountProfileViewsLastNDays(accessToken, userId, reachWindowDays)
+    pulledSetSummary["profileViewsWindowDays"] = reachWindowDays
+    pulledSetSummary["profileViews"] = totalProfileViews
+    pulledSetSummary["profileViewsError"] = profileViewsError
 
     return {
         "pulledAt": datetime.now(timezone.utc).isoformat(),

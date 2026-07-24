@@ -65,7 +65,8 @@ There is no test suite, linter, or build step configured.
 3. **`igApi.py`** — owns all the Instagram Graph API pull logic, imported by `pullData.py`:
    - `loadToken()` reads `token.json`.
    - `pullProfile`, `pullMostRecentPosts`, `pullMediaSinceDate`, `pullMediaWithinLastNDays`,
-     `pullMediaInsights`, `pullAccountReachLastNDays` — the API calls.
+     `pullMediaInsights`, `pullAccountReachLastNDays`, `pullAccountProfileViewsLastNDays` — the API
+     calls.
    - `pullMostRecentPosts(accessToken, userId, postCount)` paginates through `paging.next` URLs until
      it has collected exactly `postCount` posts (or the account runs out), rather than issuing a
      single request capped at whatever the API's default page size allows.
@@ -80,6 +81,10 @@ There is no test suite, linter, or build step configured.
    - `pullMediaInsights` tries all metrics for a post in one combined call first, and falls back to
      per-metric calls (dropping any that error) if the combined call fails — a single unsupported
      metric for a post should not lose the rest of that post's insights.
+   - `pullAccountProfileViewsLastNDays` pulls `profile_views` — confirmed live that this metric is
+     "total value" only on this API: a plain `period=day` request returns an empty data array with no
+     error, so it requires `metric_type=total_value` and returns one pre-summed number rather than a
+     daily list to add up, unlike `reach`.
    - `calculateEngagementRate` = (likes + comments) / followers, as a percentage.
    - Note: `total_interactions` is the correct current metric name — `engagement` is not a valid
      field.
@@ -93,11 +98,11 @@ There is no test suite, linter, or build step configured.
      for `"date"` — parsing `pullValue` into a midnight-UTC `cutoffDate`), then pulls insights and
      builds a full `buildPostRecord` for every post in it — all pulled posts get full detail, not just
      the first 10.
-   - For the account-level reach call (which needs a since/until range, not a post count or date),
-     `"days"` mode uses `pullValue` directly; `"date"` mode computes days between `cutoffDate` and now;
-     `"posts"` mode estimates the span via `daysSpannedByPosts` (days between the oldest pulled post
-     and now). The actual value used is stored as `accountReachWindowDays` so it's always traceable
-     per snapshot.
+   - For the account-level reach and profile-views calls (which need a since/until range, not a post
+     count or date), `"days"` mode uses `pullValue` directly; `"date"` mode computes days between
+     `cutoffDate` and now; `"posts"` mode estimates the span via `daysSpannedByPosts` (days between the
+     oldest pulled post and now). The same window is used for both calls; the actual value is stored as
+     `accountReachWindowDays` / `profileViewsWindowDays` so it's always traceable per snapshot.
    - `buildPulledSetSummary` aggregates totals across the pulled set, tagged with `pullMode` and
      `pullValue` so each snapshot is self-describing. Stored under the `pulledSetSummary` key. (Older
      entries predating this change use `recentWindow` or `last30Days` instead — the dedup check in
@@ -132,10 +137,11 @@ There is no test suite, linter, or build step configured.
     the range-filtered raw post records, rather than trusting a snapshot's pre-computed
     `pulledSetSummary` (which reflects whatever pull mode was used at collection time, not the
     viewer's selected range).
-  - **Followers** and **Account reach** KPI tiles stay anchored to the true latest pull regardless of
-    the range selector — both are point-in-time/fixed-window values from the API, not something a
-    client-side date filter can meaningfully reslice. Account reach shows its own actual
-    `accountReachWindowDays` as a label so it's never ambiguous which window it covers.
+  - **Followers**, **Account reach**, and **Profile views** KPI tiles stay anchored to the true latest
+    pull regardless of the range selector — all three are point-in-time/fixed-window values from the
+    API, not something a client-side date filter can meaningfully reslice. Account reach and Profile
+    views each show their own actual `accountReachWindowDays` / `profileViewsWindowDays` as a label so
+    it's never ambiguous which window they cover.
   - **Show top** only controls how many post cards render in the grid (post-count display, not a
     scope) — independent of the time range.
 - The charts and posts grid are hand-rolled SVG/DOM, not a library: two line charts (follower growth,
