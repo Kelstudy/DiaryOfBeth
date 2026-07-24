@@ -476,7 +476,23 @@
 
   // ---------- posts grid ----------
 
-  function renderPosts(scopedPosts, topN, latestPulledAt) {
+  function formatPostDateRangeLabel(posts) {
+    var postDates = posts
+      .map(function (p) { return new Date(p.timestamp); })
+      .filter(function (d) { return !isNaN(d.getTime()); });
+
+    if (!postDates.length) return "By engagement rate";
+
+    var oldest = new Date(Math.min.apply(null, postDates));
+    var newest = new Date(Math.max.apply(null, postDates));
+
+    if (isSameCalendarDay(oldest, newest)) {
+      return "By engagement rate, posted " + formatDateShort(oldest);
+    }
+    return "By engagement rate, from " + formatDateShort(oldest) + " to " + formatDateShort(newest);
+  }
+
+  function renderPosts(scopedPosts, topN) {
     var grid = document.getElementById("postsGrid");
     grid.innerHTML = "";
 
@@ -530,8 +546,7 @@
       grid.appendChild(card);
     });
 
-    document.getElementById("postsSub").textContent =
-      "By engagement rate, from the pull on " + formatDateShort(latestPulledAt);
+    document.getElementById("postsSub").textContent = formatPostDateRangeLabel(posts);
   }
 
   // ---------- filter-driven render ----------
@@ -551,7 +566,7 @@
     var scopedPosts = filterPostsByRange(latest.posts, cutoff);
 
     renderFilteredKpiRow(scopedPosts);
-    renderPosts(scopedPosts, topN, latest.pulledAt);
+    renderPosts(scopedPosts, topN);
 
     renderLineChart(
       "followerChart", "followerChartEmpty",
