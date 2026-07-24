@@ -274,6 +274,88 @@ def pullAccountProfileViewsLastNDays(accessToken, userId, days):
     return totalProfileViews, None
 
 
+def pullAccountViewsLastNDays(accessToken, userId, days):
+    """
+    Pull total content views (reels, posts, and stories combined - "the
+    number of times your content was played or displayed") over the last
+    N days. Not the same metric as profile_views - a much bigger number,
+    since it counts every content play, not just profile-page visits. This
+    is what the Instagram app's own "Views" figure in account insights
+    refers to. Same total-value shape as profile_views.
+    """
+    untilTime = int(time.time())
+    sinceTime = untilTime - (days * 24 * 60 * 60)
+
+    response = requests.get(
+        f"{BASE_URL}/{userId}/insights",
+        params={
+            "metric": "views",
+            "period": "day",
+            "metric_type": "total_value",
+            "since": sinceTime,
+            "until": untilTime,
+            "access_token": accessToken,
+        },
+    )
+
+    if not response.ok:
+        return None, response.json().get("error", {}).get("message", response.text)
+
+    responseData = response.json().get("data", [{}])
+    if not responseData:
+        return None, "No views data returned"
+
+    totalViews = responseData[0].get("total_value", {}).get("value", 0)
+
+    return totalViews, None
+
+
+def pullNewFollowersLastNDays(accessToken, userId, days):
+    """
+    Pull the number of accounts that followed the account in the last N
+    days. Uses follows_and_unfollows with a follow_type breakdown - the
+    FOLLOWER value is new follows in the window; NON_FOLLOWER (unfollows/
+    account deletions) is available in the same response but not returned
+    here, since this is specifically "new followers," not net change.
+
+    This is a real window total from the API, unlike comparing the
+    point-in-time follower count between two pulls (which conflates new
+    follows with unfollows, and is meaningless when pulls are only hours
+    apart rather than a full window).
+    """
+    untilTime = int(time.time())
+    sinceTime = untilTime - (days * 24 * 60 * 60)
+
+    response = requests.get(
+        f"{BASE_URL}/{userId}/insights",
+        params={
+            "metric": "follows_and_unfollows",
+            "period": "day",
+            "metric_type": "total_value",
+            "breakdown": "follow_type",
+            "since": sinceTime,
+            "until": untilTime,
+            "access_token": accessToken,
+        },
+    )
+
+    if not response.ok:
+        return None, response.json().get("error", {}).get("message", response.text)
+
+    responseData = response.json().get("data", [{}])
+    if not responseData:
+        return None, "No follows_and_unfollows data returned"
+
+    breakdowns = responseData[0].get("total_value", {}).get("breakdowns", [{}])
+    results = breakdowns[0].get("results", []) if breakdowns else []
+
+    for entry in results:
+        if entry.get("dimension_values") == ["FOLLOWER"]:
+            return entry.get("value", 0), None
+
+    return 0, None
+
+
 def pullFollowerDemographics(accessToken, userId, breakdown):
     """
     Pull a follower demographic breakdown - confirmed live to accept

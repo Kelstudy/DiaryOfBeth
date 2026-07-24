@@ -41,6 +41,8 @@ from igApi import (
     pullMediaSinceDate,
     pullAccountReachLastNDays,
     pullAccountProfileViewsLastNDays,
+    pullAccountViewsLastNDays,
+    pullNewFollowersLastNDays,
     pullFollowerDemographics,
     calculateEngagementRate,
     DEFAULT_POST_COUNT,
@@ -175,6 +177,16 @@ def buildSnapshot(accessToken, userId, pullMode, pullValue):
     pulledSetSummary["profileViewsWindowDays"] = reachWindowDays
     pulledSetSummary["profileViews"] = totalProfileViews
     pulledSetSummary["profileViewsError"] = profileViewsError
+
+    totalViews, viewsError = pullAccountViewsLastNDays(accessToken, userId, reachWindowDays)
+    pulledSetSummary["viewsWindowDays"] = reachWindowDays
+    pulledSetSummary["views"] = totalViews
+    pulledSetSummary["viewsError"] = viewsError
+
+    newFollowers, newFollowersError = pullNewFollowersLastNDays(accessToken, userId, reachWindowDays)
+    pulledSetSummary["newFollowersWindowDays"] = reachWindowDays
+    pulledSetSummary["newFollowers"] = newFollowers
+    pulledSetSummary["newFollowersError"] = newFollowersError
 
     audienceDemographics = buildAudienceDemographics(accessToken, userId)
 

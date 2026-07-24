@@ -204,6 +204,24 @@
     return tile;
   }
 
+  // Shared by every "fixed window" API metric (account reach, profile
+  // views, content views, new followers) - each is a total over its own
+  // windowDays, pulled fresh every run, not something a client-side date
+  // filter can reslice.
+  function buildWindowedStatTile(label, value, windowDays, previousValue) {
+    return buildStatTile(label, value === null || value === undefined ? "—" : formatCompactNumber(value), function (tile) {
+      var note = document.createElement("p");
+      note.className = "stat-delta flat";
+      note.textContent = windowDays
+        ? "As pulled, last " + windowDays + " day" + (windowDays === 1 ? "" : "s")
+        : "As pulled";
+      tile.appendChild(note);
+      if (previousValue != null) {
+        renderDelta(tile, value, previousValue, true, formatCompactNumber);
+      }
+    });
+  }
+
   // Point-in-time values from the latest pull - never change with the time
   // range filter, so they're rendered separately from it and never sit
   // below the filter control (that visual proximity would wrongly imply
@@ -215,46 +233,29 @@
 
     var latest = fullHistory[fullHistory.length - 1];
     var previous = fullHistory.length > 1 ? fullHistory[fullHistory.length - 2] : null;
-
-    var followers = latest.profile.followersCount;
-    var accountReach = latest.summary.accountReachSummed;
-    var accountReachWindowDays = latest.summary.accountReachWindowDays;
-    var profileViews = latest.summary.profileViews;
-    var profileViewsWindowDays = latest.summary.profileViewsWindowDays;
+    var previousSummary = previous ? previous.summary : {};
 
     container.appendChild(
-      buildStatTile("Followers", formatFullNumber(followers), function (tile) {
-        if (previous) renderDelta(tile, followers, previous.profile.followersCount, true, formatFullNumber);
+      buildStatTile("Followers", formatFullNumber(latest.profile.followersCount), function (tile) {
+        if (previous) renderDelta(tile, latest.profile.followersCount, previous.profile.followersCount, true, formatFullNumber);
       })
     );
 
-    container.appendChild(
-      buildStatTile("Account reach", accountReach === null || accountReach === undefined ? "—" : formatCompactNumber(accountReach), function (tile) {
-        var note = document.createElement("p");
-        note.className = "stat-delta flat";
-        note.textContent = accountReachWindowDays
-          ? "As pulled, last " + accountReachWindowDays + " day" + (accountReachWindowDays === 1 ? "" : "s")
-          : "As pulled";
-        tile.appendChild(note);
-        if (previous && previous.summary.accountReachSummed != null) {
-          renderDelta(tile, accountReach, previous.summary.accountReachSummed, true, formatCompactNumber);
-        }
-      })
-    );
+    container.appendChild(buildWindowedStatTile(
+      "New followers", latest.summary.newFollowers, latest.summary.newFollowersWindowDays, previousSummary.newFollowers
+    ));
 
-    container.appendChild(
-      buildStatTile("Profile views", profileViews === null || profileViews === undefined ? "—" : formatCompactNumber(profileViews), function (tile) {
-        var note = document.createElement("p");
-        note.className = "stat-delta flat";
-        note.textContent = profileViewsWindowDays
-          ? "As pulled, last " + profileViewsWindowDays + " day" + (profileViewsWindowDays === 1 ? "" : "s")
-          : "As pulled";
-        tile.appendChild(note);
-        if (previous && previous.summary.profileViews != null) {
-          renderDelta(tile, profileViews, previous.summary.profileViews, true, formatCompactNumber);
-        }
-      })
-    );
+    container.appendChild(buildWindowedStatTile(
+      "Views", latest.summary.views, latest.summary.viewsWindowDays, previousSummary.views
+    ));
+
+    container.appendChild(buildWindowedStatTile(
+      "Account reach", latest.summary.accountReachSummed, latest.summary.accountReachWindowDays, previousSummary.accountReachSummed
+    ));
+
+    container.appendChild(buildWindowedStatTile(
+      "Profile views", latest.summary.profileViews, latest.summary.profileViewsWindowDays, previousSummary.profileViews
+    ));
   }
 
   // Recomputed from whatever the time range filter currently selects -
