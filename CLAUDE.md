@@ -170,11 +170,10 @@ All paths below are relative to `scripts/` unless stated otherwise.
   bracket × gender, 3-series categorical with legend + per-bar hover tooltip) plus two `renderRankList`
   calls (top 8 countries via `formatCountryName()`'s ISO code lookup, top 8 cities) sharing one ranked
   list-with-proportional-bar component rather than a second chart type; **Collabs** is entirely static
-  content in `index.html` (a real personal bio in the `.explainer` card, then rate card, "what's
-  included," contact details) — not data-driven, not touched by `dashboard.js` at all beyond the tab
-  show/hide. Every value that still needs replacing before sharing the page externally is marked
-  `PLACEHOLDER` (rates, email, turnaround times) — search `index.html` for that string to find them
-  all; the bio itself is real, supplied by the account owner, not a placeholder.
+  placeholder content in `index.html` (rate card, "what's included," contact details) — not
+  data-driven, not touched by `dashboard.js` at all beyond the tab show/hide. Every value that needs
+  replacing before sharing the page externally is marked `PLACEHOLDER` (rates, email, turnaround times)
+  — search `index.html` for that string to find them all.
 - The masthead avatar is a static file at `assets/profile.jpg` (not pulled from the API — Instagram's
   Graph API doesn't expose a fetchable profile picture URL for this product), referenced directly in
   `index.html`. Replace that file to change the photo; no code change needed. It renders inside
@@ -184,9 +183,11 @@ All paths below are relative to `scripts/` unless stated otherwise.
   (off-white, top-level cards), `--surface-2` (pale pink, nested chips *inside* an off-white card —
   post cards in the Top Posts grid, rate-card items in Collabs). Using page-plane pink again for those
   nested chips would have made them blend into the page instead of reading as "inside" the card.
-- An explainer card (`.explainer` in `index.html`, right below the masthead) gives first-time visitors
-  — brand collaborators, not repo maintainers — a short, plain-language read on what the page shows and
-  what "engagement rate" means. Static content, not data-driven.
+- An explainer card (`.explainer` in `index.html`, right below the masthead, above the tab nav so it's
+  visible on all three tabs) holds Beth's own bio — who she is, what she posts about, what brands she
+  will/won't collab with — supplied by the account owner, not generic dashboard-usage copy. Static
+  content, not data-driven. (An earlier version of this card explained how to read the dashboard
+  instead; that copy was tried, then explicitly reverted in favor of the bio.)
 - **Layout is split by what's actually filterable**, so a filter control always sits directly above the
   content it scopes rather than floating above the whole page implying it controls everything:
   - `#kpiRowFixed` (Followers, Net followers, Views, Account reach, Profile views) renders once at boot
