@@ -198,7 +198,10 @@ html, body {
 .chart-wrap {
   position: relative;
   width: 100%;
-  overflow-x: auto;
+  /* The SVG scales responsively via viewBox rather than overflowing its
+     container, so there's no wide content that needs horizontal scroll -
+     overflow must stay visible or the hover tooltip clips at the edges. */
+  overflow: visible;
 }
 
 .chart-wrap svg {

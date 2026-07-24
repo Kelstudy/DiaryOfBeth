@@ -402,6 +402,18 @@
       var pyPercent = Math.max((py / height) * 100, 15);
       tooltip.style.left = pxPercent + "%";
       tooltip.style.top = pyPercent + "%";
+
+      // the tooltip is horizontally centered by default (translateX -50%),
+      // which pushes it past the card edge near the first/last points -
+      // switch to a left- or right-anchored transform near those edges so
+      // it always stays fully inside the chart card.
+      if (pxPercent < 15) {
+        tooltip.style.transform = "translate(0, -110%)";
+      } else if (pxPercent > 85) {
+        tooltip.style.transform = "translate(-100%, -110%)";
+      } else {
+        tooltip.style.transform = "translate(-50%, -110%)";
+      }
       tooltip.classList.add("visible");
     }
 
