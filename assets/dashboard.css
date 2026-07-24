@@ -123,12 +123,31 @@ html, body {
 
 /* ---------- Filters ---------- */
 
-.filter-row {
+/* Sits directly above the block of content it actually scopes (the
+   filtered KPI row + both trend charts), rather than floating above
+   everything on the page - the point-in-time KPI tiles above it never
+   change with this control, so it shouldn't look like it governs them. */
+.section-heading {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.posts-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .filter-field {

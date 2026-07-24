@@ -28,16 +28,25 @@
     <section class="explainer">
       <h2>What you're looking at</h2>
       <p>
-        This page is a live media kit for <strong>@thediaryofbeth</strong>, updated automatically every
-        day — no one manually pulls these numbers. The stat tiles below show current totals; the two
-        charts show how followers and engagement rate have trended over time; the grid at the bottom
-        shows the best-performing individual posts. Use the filters to narrow the time range or how
-        many posts to see. <strong>Engagement rate</strong> = (likes + comments) ÷ followers, the
-        standard way to judge how responsive an audience is, not just how big it is.
+        This is a live media kit for <strong>@thediaryofbeth</strong> — nobody's copying numbers into a
+        deck by hand, it pulls fresh straight from Instagram every day and updates itself.
+      </p>
+      <p>
+        The stats right below always reflect where the account stands today. Further down, you can pick
+        a time range to see how growth and engagement have trended, and browse whichever posts performed
+        best in that window.
+      </p>
+      <p>
+        One number worth knowing going in: <strong>engagement rate</strong> is likes and comments
+        divided by follower count. It's a better read on whether people actually care than follower
+        count alone.
       </p>
     </section>
 
-    <div class="filter-row" role="group" aria-label="Filters">
+    <section class="kpi-row" id="kpiRowFixed" aria-label="Current stats"></section>
+
+    <div class="section-heading">
+      <h2>Performance trends</h2>
       <label class="filter-field">
         <span>Time range</span>
         <select id="rangeSelect">
@@ -46,25 +55,15 @@
           <option value="all">All time</option>
         </select>
       </label>
-      <label class="filter-field">
-        <span>Show top</span>
-        <select id="topNSelect">
-          <option value="5">5 posts</option>
-          <option value="10" selected>10 posts</option>
-          <option value="15">15 posts</option>
-          <option value="25">25 posts</option>
-          <option value="9999">All pulled posts</option>
-        </select>
-      </label>
     </div>
 
-    <section class="kpi-row" id="kpiRow" aria-label="Key stats"></section>
+    <section class="kpi-row" id="kpiRowFiltered" aria-label="Stats for selected range"></section>
 
     <section class="chart-grid">
       <div class="card">
         <div class="card-head">
           <h2>Follower growth</h2>
-          <p class="card-sub">Followers at time of each pull</p>
+          <p class="card-sub">Followers at time of each pull, within the selected range</p>
         </div>
         <div class="chart-wrap" id="followerChart"></div>
         <p class="chart-empty" id="followerChartEmpty" hidden>Not enough history yet — check back after a few more pulls.</p>
@@ -73,7 +72,7 @@
       <div class="card">
         <div class="card-head">
           <h2>Engagement rate</h2>
-          <p class="card-sub">Average across each pulled post set</p>
+          <p class="card-sub">Average across each pulled post set, within the selected range</p>
         </div>
         <div class="chart-wrap" id="engagementChart"></div>
         <p class="chart-empty" id="engagementChartEmpty" hidden>Not enough history yet — check back after a few more pulls.</p>
@@ -81,9 +80,21 @@
     </section>
 
     <section class="card posts-card">
-      <div class="card-head">
-        <h2>Top posts</h2>
-        <p class="card-sub" id="postsSub">By engagement rate, from the most recent pull</p>
+      <div class="card-head posts-card-head">
+        <div>
+          <h2>Top posts</h2>
+          <p class="card-sub" id="postsSub">By engagement rate, within the selected time range</p>
+        </div>
+        <label class="filter-field">
+          <span>Show top</span>
+          <select id="topNSelect">
+            <option value="5">5 posts</option>
+            <option value="10" selected>10 posts</option>
+            <option value="15">15 posts</option>
+            <option value="25">25 posts</option>
+            <option value="9999">All pulled posts</option>
+          </select>
+        </label>
       </div>
       <div class="posts-grid" id="postsGrid"></div>
     </section>

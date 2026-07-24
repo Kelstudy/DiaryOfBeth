@@ -129,27 +129,31 @@ There is no test suite, linter, or build step configured.
   Graph API doesn't expose a fetchable profile picture URL for this product), referenced directly in
   `index.html`. Replace that file to change the photo; no code change needed.
 - An explainer card (`.explainer` in `index.html`, right below the masthead) gives first-time visitors
-  — brand collaborators, not repo maintainers — a plain-language one-paragraph summary of what the page
-  shows and what "engagement rate" means. Static content, not data-driven.
-- Two filter `<select>`s (`#rangeSelect`: 7/30 days or all time — capped at 30 to match the workflow's
-  default pull window, see Storage & automation; `#topNSelect`: 5/10/15/25/all posts)
-  sit above the KPI row and drive `renderDashboard()` on `change`. **Scoping rules** (deliberately
-  different per element, since some KPIs are point-in-time and can't be "filtered"):
-  - **Time range** filters which *history snapshots* feed the two line charts, and which of the
-    latest snapshot's own posts (by each post's own `timestamp`) feed the Engagement rate / Total
-    interactions tiles and the top-posts grid. It can never surface posts older than what the last
-    pull actually collected — a wide range just means "show everything that was pulled."
-  - `computeAggregateFromPosts()` recomputes engagement rate / interactions / reach client-side from
-    the range-filtered raw post records, rather than trusting a snapshot's pre-computed
-    `pulledSetSummary` (which reflects whatever pull mode was used at collection time, not the
-    viewer's selected range).
-  - **Followers**, **Account reach**, and **Profile views** KPI tiles stay anchored to the true latest
-    pull regardless of the range selector — all three are point-in-time/fixed-window values from the
-    API, not something a client-side date filter can meaningfully reslice. Account reach and Profile
-    views each show their own actual `accountReachWindowDays` / `profileViewsWindowDays` as a label so
-    it's never ambiguous which window they cover.
-  - **Show top** only controls how many post cards render in the grid (post-count display, not a
-    scope) — independent of the time range.
+  — brand collaborators, not repo maintainers — a short, plain-language read on what the page shows and
+  what "engagement rate" means. Static content, not data-driven.
+- **Layout is split by what's actually filterable**, so a filter control always sits directly above the
+  content it scopes rather than floating above the whole page implying it controls everything:
+  - `#kpiRowFixed` (Followers, Account reach, Profile views) renders once at boot via
+    `renderFixedKpiRow()` and never changes with the filter — these are point-in-time/fixed-window API
+    values a client-side date filter can't meaningfully reslice. It sits directly under the masthead,
+    with no filter control anywhere near it.
+  - The `#rangeSelect` (`Time range`: 7/30 days or all time — capped at 30 to match the workflow's
+    default pull window, see Storage & automation) lives in a `.section-heading` labeled "Performance
+    trends", positioned immediately above the one block of content it actually scopes:
+    `#kpiRowFiltered` (Engagement rate, Total interactions, via `renderFilteredKpiRow()`) and both trend
+    charts. It filters which *history snapshots* feed the charts, and which of the latest snapshot's own
+    posts (by each post's own `timestamp`) feed the filtered KPI tiles and the top-posts grid. It can
+    never surface posts older than what the last pull actually collected — a wide range just means
+    "show everything that was pulled."
+  - `computeAggregateFromPosts()` recomputes engagement rate / interactions client-side from the
+    range-filtered raw post records, rather than trusting a snapshot's pre-computed `pulledSetSummary`
+    (which reflects whatever pull mode was used at collection time, not the viewer's selected range).
+  - `#topNSelect` (`Show top`: 5/10/15/25/all posts) lives inside the Top Posts card's own header
+    (`.posts-card-head`), next to that card's title, since it only ever affects that one grid — how
+    many cards render, not a data scope.
+  - `renderDashboard(fullHistory, rangeValue, topN)` is the single function both selects' `change`
+    listeners call; it re-renders the filtered KPI row, both charts, and the posts grid together so
+    they can never disagree with each other.
 - The charts and posts grid are hand-rolled SVG/DOM, not a library: two line charts (follower growth,
   engagement rate over time — with a hover crosshair + tooltip, and a direct end-label on the latest
   point, clamped so it can never render above the chart card), and a top-posts grid (range-filtered

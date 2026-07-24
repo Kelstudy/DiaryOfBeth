@@ -166,14 +166,17 @@
     return tile;
   }
 
-  function renderKpiRow(fullHistory, scopedPosts) {
-    var container = document.getElementById("kpiRow");
+  // Point-in-time values from the latest pull - never change with the time
+  // range filter, so they're rendered separately from it and never sit
+  // below the filter control (that visual proximity would wrongly imply
+  // they respond to it).
+  function renderFixedKpiRow(fullHistory) {
+    var container = document.getElementById("kpiRowFixed");
     container.innerHTML = "";
     if (!fullHistory.length) return;
 
     var latest = fullHistory[fullHistory.length - 1];
     var previous = fullHistory.length > 1 ? fullHistory[fullHistory.length - 2] : null;
-    var aggregate = computeAggregateFromPosts(scopedPosts);
 
     var followers = latest.profile.followersCount;
     var accountReach = latest.summary.accountReachSummed;
@@ -184,24 +187,6 @@
     container.appendChild(
       buildStatTile("Followers", formatFullNumber(followers), function (tile) {
         if (previous) renderDelta(tile, followers, previous.profile.followersCount, true, formatFullNumber);
-      })
-    );
-
-    container.appendChild(
-      buildStatTile("Engagement rate", formatPercent(aggregate.averageEngagementRate), function (tile) {
-        var note = document.createElement("p");
-        note.className = "stat-delta flat";
-        note.textContent = "Across " + aggregate.postsCounted + " post" + (aggregate.postsCounted === 1 ? "" : "s") + " in range";
-        tile.appendChild(note);
-      })
-    );
-
-    container.appendChild(
-      buildStatTile("Total interactions", formatCompactNumber(aggregate.totalInteractions), function (tile) {
-        var note = document.createElement("p");
-        note.className = "stat-delta flat";
-        note.textContent = "Across " + aggregate.postsCounted + " post" + (aggregate.postsCounted === 1 ? "" : "s") + " in range";
-        tile.appendChild(note);
       })
     );
 
@@ -230,6 +215,34 @@
         if (previous && previous.summary.profileViews != null) {
           renderDelta(tile, profileViews, previous.summary.profileViews, true, formatCompactNumber);
         }
+      })
+    );
+  }
+
+  // Recomputed from whatever the time range filter currently selects -
+  // rendered directly below that control so the connection is obvious.
+  function renderFilteredKpiRow(scopedPosts) {
+    var container = document.getElementById("kpiRowFiltered");
+    container.innerHTML = "";
+
+    var aggregate = computeAggregateFromPosts(scopedPosts);
+    var postsLabel = "Across " + aggregate.postsCounted + " post" + (aggregate.postsCounted === 1 ? "" : "s") + " in range";
+
+    container.appendChild(
+      buildStatTile("Engagement rate", formatPercent(aggregate.averageEngagementRate), function (tile) {
+        var note = document.createElement("p");
+        note.className = "stat-delta flat";
+        note.textContent = postsLabel;
+        tile.appendChild(note);
+      })
+    );
+
+    container.appendChild(
+      buildStatTile("Total interactions", formatCompactNumber(aggregate.totalInteractions), function (tile) {
+        var note = document.createElement("p");
+        note.className = "stat-delta flat";
+        note.textContent = postsLabel;
+        tile.appendChild(note);
       })
     );
   }
@@ -523,13 +536,12 @@
 
   // ---------- filter-driven render ----------
 
-  // Filters scope everything below them: the KPI row (re-aggregated from
-  // the latest pull's posts within range), both charts (snapshots within
-  // range), and the top-posts grid (posts within range, capped at topN).
-  // The masthead and the Followers/Account-reach KPI tiles stay anchored to
-  // the true latest pull regardless of range, since those are point-in-time
-  // values rather than something that gets "more" or "less" of with a
-  // wider window.
+  // The time range filter scopes exactly the section it's positioned above:
+  // the filtered KPI row (re-aggregated from the latest pull's posts within
+  // range), both trend charts (snapshots within range), and which posts are
+  // eligible for the top-posts grid. The fixed KPI row above it (Followers,
+  // Account reach, Profile views) is rendered separately and never touched
+  // here, since those are point-in-time values a date filter can't reslice.
   function renderDashboard(fullHistory, rangeValue, topN) {
     if (!fullHistory.length) return;
 
@@ -538,7 +550,7 @@
     var latest = fullHistory[fullHistory.length - 1];
     var scopedPosts = filterPostsByRange(latest.posts, cutoff);
 
-    renderKpiRow(fullHistory, scopedPosts);
+    renderFilteredKpiRow(scopedPosts);
     renderPosts(scopedPosts, topN, latest.pulledAt);
 
     renderLineChart(
@@ -573,6 +585,7 @@
     .then(function (rawHistory) {
       var history = normalizeHistory(rawHistory);
       renderMasthead(history);
+      renderFixedKpiRow(history);
 
       var rangeSelect = document.getElementById("rangeSelect");
       var topNSelect = document.getElementById("topNSelect");
