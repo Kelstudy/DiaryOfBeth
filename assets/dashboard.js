@@ -27,6 +27,16 @@
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
+  function formatTimeShort(date) {
+    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
+
+  function isSameCalendarDay(dateA, dateB) {
+    return dateA.getFullYear() === dateB.getFullYear() &&
+      dateA.getMonth() === dateB.getMonth() &&
+      dateA.getDate() === dateB.getDate();
+  }
+
   function formatDateFull(date) {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
   }
@@ -286,14 +296,19 @@
       stroke: "var(--baseline)", "stroke-width": "1",
     }));
 
-    // x-axis labels: first and last only
+    // x-axis labels: first and last only. If every point falls on the same
+    // calendar day (e.g. several pulls run the same day), a date label would
+    // read identically at both ends and look like a single point - show the
+    // time of day instead so same-day movement is still legible.
+    var allSameDay = isSameCalendarDay(points[0].x, points[points.length - 1].x);
+    var axisLabelFormat = allSameDay ? formatTimeShort : formatDateShort;
     [points[0], points[points.length - 1]].forEach(function (p, i) {
       var text = makeSvgEl("text", {
         x: xPos(p.x.getTime()), y: height - 6,
         "text-anchor": i === 0 ? "start" : "end",
         fill: "var(--text-muted)", "font-size": "10",
       });
-      text.textContent = formatDateShort(p.x);
+      text.textContent = axisLabelFormat(p.x);
       svg.appendChild(text);
     });
 
