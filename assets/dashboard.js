@@ -476,23 +476,16 @@
 
   // ---------- posts grid ----------
 
-  function formatPostDateRangeLabel(posts) {
-    var postDates = posts
-      .map(function (p) { return new Date(p.timestamp); })
-      .filter(function (d) { return !isNaN(d.getTime()); });
-
-    if (!postDates.length) return "By engagement rate";
-
-    var oldest = new Date(Math.min.apply(null, postDates));
-    var newest = new Date(Math.max.apply(null, postDates));
-
-    if (isSameCalendarDay(oldest, newest)) {
-      return "By engagement rate, posted " + formatDateShort(oldest);
-    }
-    return "By engagement rate, from " + formatDateShort(oldest) + " to " + formatDateShort(newest);
+  // Describes the filter window itself (matches the Time range selector)
+  // rather than the date span of whichever posts happen to rank in the top
+  // N by engagement - those two can legitimately differ, since a post from
+  // today might just not be a top performer yet.
+  function formatRangeWindowLabel(rangeValue) {
+    if (rangeValue === "all") return "across all pulled posts";
+    return "in the last " + rangeValue + " days";
   }
 
-  function renderPosts(scopedPosts, topN) {
+  function renderPosts(scopedPosts, topN, rangeValue) {
     var grid = document.getElementById("postsGrid");
     grid.innerHTML = "";
 
@@ -500,12 +493,14 @@
       return (b.engagementRate || 0) - (a.engagementRate || 0);
     }).slice(0, topN);
 
+    document.getElementById("postsSub").textContent =
+      "By engagement rate, " + formatRangeWindowLabel(rangeValue);
+
     if (!posts.length) {
       var empty = document.createElement("p");
       empty.className = "chart-empty";
       empty.textContent = "No posts in the selected range from the most recent pull.";
       grid.appendChild(empty);
-      document.getElementById("postsSub").textContent = "By engagement rate";
       return;
     }
 
@@ -545,8 +540,6 @@
 
       grid.appendChild(card);
     });
-
-    document.getElementById("postsSub").textContent = formatPostDateRangeLabel(posts);
   }
 
   // ---------- filter-driven render ----------
@@ -566,7 +559,7 @@
     var scopedPosts = filterPostsByRange(latest.posts, cutoff);
 
     renderFilteredKpiRow(scopedPosts);
-    renderPosts(scopedPosts, topN);
+    renderPosts(scopedPosts, topN, rangeValue);
 
     renderLineChart(
       "followerChart", "followerChartEmpty",
