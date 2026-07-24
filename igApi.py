@@ -89,11 +89,11 @@ def pullMostRecentPosts(accessToken, userId, postCount):
     return collectedItems[:postCount]
 
 
-def pullMediaWithinLastNDays(accessToken, userId, days):
+def pullMediaSinceDate(accessToken, userId, cutoffDate):
     """
-    Paginate through posts (newest first) and collect every post from the
-    last N days - not just the first page. Stops as soon as a post older
-    than the window is reached, since Instagram returns posts in reverse
+    Paginate through posts (newest first) and collect every post at or after
+    cutoffDate - not just the first page. Stops as soon as a post older than
+    cutoffDate is reached, since Instagram returns posts in reverse
     chronological order, so nothing beyond that point can still be in range.
 
     This means the number of posts returned is exact, not limited by a
@@ -122,7 +122,7 @@ def pullMediaWithinLastNDays(accessToken, userId, days):
 
         reachedOlderPost = False
         for mediaItem in responseData.get("data", []):
-            if isWithinLastNDays(mediaItem.get("timestamp", ""), days):
+            if isAtOrAfter(mediaItem.get("timestamp", ""), cutoffDate):
                 collectedItems.append(mediaItem)
             else:
                 reachedOlderPost = True
@@ -140,8 +140,14 @@ def pullMediaWithinLastNDays(accessToken, userId, days):
         requestUrl = nextPageUrl
         requestParams = None
 
-    print(f"  (scanned {pageCount} page(s) of posts to find everything in the last {days} day(s))")
+    print(f"  (scanned {pageCount} page(s) of posts to find everything since {cutoffDate.date()})")
     return collectedItems
+
+
+def pullMediaWithinLastNDays(accessToken, userId, days):
+    """Collect every post from the last N days (see pullMediaSinceDate)."""
+    cutoffDate = datetime.now(timezone.utc) - timedelta(days=days)
+    return pullMediaSinceDate(accessToken, userId, cutoffDate)
 
 
 def getMetricListForProductType(productType):
@@ -230,14 +236,13 @@ def pullAccountReachLastNDays(accessToken, userId, days):
     return totalReach, None
 
 
-def isWithinLastNDays(isoTimestamp, days):
-    """Check whether a post's timestamp falls within the last N days."""
+def isAtOrAfter(isoTimestamp, cutoffDate):
+    """Check whether a post's timestamp falls at or after cutoffDate."""
     try:
         postDate = datetime.fromisoformat(isoTimestamp)
     except (ValueError, TypeError):
         return False
 
-    cutoffDate = datetime.now(timezone.utc) - timedelta(days=days)
     return postDate >= cutoffDate
 
 

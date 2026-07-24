@@ -25,12 +25,14 @@ INSTAGRAM_REDIRECT_URI=https://localhost/
 - `python getAccessToken.py` — one-time (or re-auth) interactive flow: builds an authorization URL,
   takes a pasted redirect URL back, and exchanges it for a long-lived (~60 day) token saved to
   `token.json` (gitignored). Run this first, and again whenever the token has fully expired.
-- `python pullData.py` — the real collector. Prompts for exactly one pull mode: pull every post from
-  the last N days, or pull exactly N most recent posts (Enter accepts the defaults: 30 days / 10
-  posts) — never both combined, so requesting "30 days" can't silently get capped at "10 posts". Then
-  builds one JSON snapshot and appends it to `data/statsHistory.json`, skipping the save if nothing
-  changed since the last run. Interactive prompts mean this isn't yet cron-friendly as-is — that'll
-  need addressing when GitHub Actions automation is set up (e.g. env var / CLI arg overrides).
+- `python pullData.py` — the real collector. Prompts for exactly one pull mode: every post from the
+  last N days, exactly N most recent posts, or every post since a given date (midnight UTC on that
+  date onward) — never combined, so requesting "30 days" can't silently get capped at "10 posts".
+  Enter accepts the day/post-count defaults (30 days / 10 posts); the date mode always requires
+  explicit input. Then builds one JSON snapshot and appends it to `data/statsHistory.json`, skipping
+  the save if nothing changed since the last run. Interactive prompts mean this isn't yet cron-friendly
+  as-is — that'll need addressing when GitHub Actions automation is set up (e.g. env var / CLI arg
+  overrides).
 
 There is no test suite, linter, or build step configured.
 
@@ -53,14 +55,15 @@ There is no test suite, linter, or build step configured.
    Access — single-user, own-account-only, no Meta App Review needed.
 2. **`igApi.py`** — owns all the Instagram Graph API pull logic, imported by `pullData.py`:
    - `loadToken()` reads `token.json`.
-   - `pullProfile`, `pullMostRecentPosts`, `pullMediaWithinLastNDays`, `pullMediaInsights`,
-     `pullAccountReachLastNDays` — the API calls.
+   - `pullProfile`, `pullMostRecentPosts`, `pullMediaSinceDate`, `pullMediaWithinLastNDays`,
+     `pullMediaInsights`, `pullAccountReachLastNDays` — the API calls.
    - `pullMostRecentPosts(accessToken, userId, postCount)` paginates through `paging.next` URLs until
      it has collected exactly `postCount` posts (or the account runs out), rather than issuing a
      single request capped at whatever the API's default page size allows.
-   - `pullMediaWithinLastNDays(accessToken, userId, days)` paginates until it hits a post older than
-     the requested window (posts come back newest-first), so the post set is exact, not capped by
-     page size.
+   - `pullMediaSinceDate(accessToken, userId, cutoffDate)` paginates until it hits a post older than
+     `cutoffDate` (posts come back newest-first), so the post set is exact, not capped by page size.
+     `pullMediaWithinLastNDays(accessToken, userId, days)` is a thin wrapper over this — it just
+     computes `cutoffDate = now - timedelta(days=days)`.
    - `getMetricListForProductType` — Reels support `reach`, `views`, `saved`, `shares`,
      `total_interactions` but **not** `impressions`; photos/carousels are expected to use
      `impressions` instead of `views` (confirmed live for Reels; not yet confirmed live for
@@ -72,17 +75,20 @@ There is no test suite, linter, or build step configured.
    - Note: `total_interactions` is the correct current metric name — `engagement` is not a valid
      field.
 3. **`pullData.py`** — imports the pull functions from `igApi.py` and assembles them into a snapshot:
-   - `promptForPullMode()` asks the user to choose exactly one of `"days"` or `"posts"` mode and a
-     value, returning `(pullMode, pullValue)`. These feed into a single pulled post set — there's no
-     separate "detailed posts" list capped independently of the day window anymore.
-   - `buildSnapshot(accessToken, userId, pullMode, pullValue)` pulls that one post set (via
-     `pullMediaWithinLastNDays` for `"days"` mode, `pullMostRecentPosts` for `"posts"` mode), then
-     pulls insights and builds a full `buildPostRecord` for every post in it — all pulled posts get
-     full detail, not just the first 10.
-   - For the account-level reach call (which needs a since/until range, not a post count),
-     `"days"` mode uses `pullValue` directly; `"posts"` mode estimates the span via
-     `daysSpannedByPosts` (days between the oldest pulled post and now). The actual value used is
-     stored as `accountReachWindowDays` so it's always traceable per snapshot.
+   - `promptForPullMode()` asks the user to choose exactly one of `"days"`, `"posts"`, or `"date"` mode
+     and a value (`pullValue` is an int for `"days"`/`"posts"`, a `"YYYY-MM-DD"` string for `"date"`),
+     returning `(pullMode, pullValue)`. These feed into a single pulled post set — there's no separate
+     "detailed posts" list capped independently of the day window.
+   - `buildSnapshot(accessToken, userId, pullMode, pullValue)` pulls that one post set
+     (`pullMediaWithinLastNDays` for `"days"`, `pullMostRecentPosts` for `"posts"`, `pullMediaSinceDate`
+     for `"date"` — parsing `pullValue` into a midnight-UTC `cutoffDate`), then pulls insights and
+     builds a full `buildPostRecord` for every post in it — all pulled posts get full detail, not just
+     the first 10.
+   - For the account-level reach call (which needs a since/until range, not a post count or date),
+     `"days"` mode uses `pullValue` directly; `"date"` mode computes days between `cutoffDate` and now;
+     `"posts"` mode estimates the span via `daysSpannedByPosts` (days between the oldest pulled post
+     and now). The actual value used is stored as `accountReachWindowDays` so it's always traceable
+     per snapshot.
    - `buildPulledSetSummary` aggregates totals across the pulled set, tagged with `pullMode` and
      `pullValue` so each snapshot is self-describing. Stored under the `pulledSetSummary` key. (Older
      entries predating this change use `recentWindow` or `last30Days` instead — the dedup check in

@@ -11,9 +11,11 @@ identical (aside from the timestamp) to the last saved one - e.g. the script
 was re-run with nothing new to report - it is skipped instead of appended,
 to keep the history free of no-op duplicates.
 
-On start, it prompts for exactly one pull mode - either "pull every post
-from the last N days" or "pull exactly N posts" - never both at once, so
-asking for 30 days and 10 posts can't silently cap you at 10 posts.
+On start, it prompts for exactly one pull mode - "pull every post from the
+last N days", "pull exactly N posts", or "pull every post since a given
+date" - never combined, so asking for 30 days and 10 posts can't silently
+cap you at 10 posts. The since-date mode treats the date as starting at
+midnight UTC, so that date's own posts are included.
 
 Run with:
   python pullData.py
@@ -29,6 +31,7 @@ from igApi import (
     pullMostRecentPosts,
     pullMediaInsights,
     pullMediaWithinLastNDays,
+    pullMediaSinceDate,
     pullAccountReachLastNDays,
     calculateEngagementRate,
     DEFAULT_POST_COUNT,
@@ -125,6 +128,10 @@ def buildSnapshot(accessToken, userId, pullMode, pullValue):
     if pullMode == "days":
         mediaItems = pullMediaWithinLastNDays(accessToken, userId, pullValue)
         reachWindowDays = pullValue
+    elif pullMode == "date":
+        cutoffDate = datetime.strptime(pullValue, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        mediaItems = pullMediaSinceDate(accessToken, userId, cutoffDate)
+        reachWindowDays = max((datetime.now(timezone.utc) - cutoffDate).days + 1, 1)
     else:
         mediaItems = pullMostRecentPosts(accessToken, userId, pullValue)
         reachWindowDays = daysSpannedByPosts(mediaItems, fallbackDays=DEFAULT_WINDOW_DAYS)
@@ -219,21 +226,37 @@ def promptForPositiveInt(promptText, defaultValue):
     return parsedValue
 
 
+def promptForDateString(promptText):
+    """Ask for a date in YYYY-MM-DD form, re-prompting until one parses."""
+    while True:
+        rawInput = input(f"{promptText} (YYYY-MM-DD): ").strip()
+        try:
+            datetime.strptime(rawInput, "%Y-%m-%d")
+            return rawInput
+        except ValueError:
+            print("  Not a valid date - please use YYYY-MM-DD format (e.g. 2026-07-01).")
+
+
 def promptForPullMode():
     """
     Ask the user to choose exactly one way to select posts: by day window
-    (every post from the last N days, however many that is) or by post
-    count (exactly N most recent posts, however far back that reaches).
-    Returns (pullMode, pullValue).
+    (every post from the last N days), by post count (exactly N most recent
+    posts, however far back that reaches), or by a since-date (every post
+    from midnight UTC on that date onward). Returns (pullMode, pullValue).
     """
     print("How should posts be pulled?")
     print("  1) By number of days - pulls every post from that many days back")
     print("  2) By number of posts - pulls exactly that many most recent posts")
-    choice = input("Choose 1 or 2 [default 1]: ").strip()
+    print("  3) By date - pulls every post since midnight UTC on a given date")
+    choice = input("Choose 1, 2, or 3 [default 1]: ").strip()
 
     if choice == "2":
         postCount = promptForPositiveInt("How many posts to pull?", DEFAULT_POST_COUNT)
         return "posts", postCount
+
+    if choice == "3":
+        dateString = promptForDateString("Pull every post since which date?")
+        return "date", dateString
 
     windowDays = promptForPositiveInt("How many days to pull?", DEFAULT_WINDOW_DAYS)
     return "days", windowDays
