@@ -310,18 +310,21 @@ def pullAccountViewsLastNDays(accessToken, userId, days):
     return totalViews, None
 
 
-def pullNewFollowersLastNDays(accessToken, userId, days):
+def pullNetFollowersLastNDays(accessToken, userId, days):
     """
-    Pull the number of accounts that followed the account in the last N
-    days. Uses follows_and_unfollows with a follow_type breakdown - the
-    FOLLOWER value is new follows in the window; NON_FOLLOWER (unfollows/
-    account deletions) is available in the same response but not returned
-    here, since this is specifically "new followers," not net change.
+    Pull net follower change over the last N days - new follows minus
+    unfollows/account deletions - matching the "Net followers" figure
+    Instagram's own app shows on the Insights overview screen. Uses
+    follows_and_unfollows with a follow_type breakdown: FOLLOWER is new
+    follows in the window, NON_FOLLOWER is unfollows/deletions; confirmed
+    live that FOLLOWER - NON_FOLLOWER lines up closely with the app's own
+    reported net figure for the same window (small gaps expected purely
+    from pull-timing, not a discrepancy in the math).
 
     This is a real window total from the API, unlike comparing the
-    point-in-time follower count between two pulls (which conflates new
-    follows with unfollows, and is meaningless when pulls are only hours
-    apart rather than a full window).
+    point-in-time follower count between two pulls (which is close to
+    meaningless when pulls are only hours apart rather than a full
+    window).
     """
     untilTime = int(time.time())
     sinceTime = untilTime - (days * 24 * 60 * 60)
@@ -349,11 +352,15 @@ def pullNewFollowersLastNDays(accessToken, userId, days):
     breakdowns = responseData[0].get("total_value", {}).get("breakdowns", [{}])
     results = breakdowns[0].get("results", []) if breakdowns else []
 
+    newFollows = 0
+    unfollows = 0
     for entry in results:
         if entry.get("dimension_values") == ["FOLLOWER"]:
-            return entry.get("value", 0), None
+            newFollows = entry.get("value", 0)
+        elif entry.get("dimension_values") == ["NON_FOLLOWER"]:
+            unfollows = entry.get("value", 0)
 
-    return 0, None
+    return newFollows - unfollows, None
 
 
 def pullFollowerDemographics(accessToken, userId, breakdown):

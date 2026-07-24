@@ -71,7 +71,7 @@ All paths below are relative to `scripts/` unless stated otherwise.
    - `loadToken()` reads `token.json`.
    - `pullProfile`, `pullMostRecentPosts`, `pullMediaSinceDate`, `pullMediaWithinLastNDays`,
      `pullMediaInsights`, `pullAccountReachLastNDays`, `pullAccountProfileViewsLastNDays`,
-     `pullAccountViewsLastNDays`, `pullNewFollowersLastNDays`, `pullFollowerDemographics` — the API
+     `pullAccountViewsLastNDays`, `pullNetFollowersLastNDays`, `pullFollowerDemographics` — the API
      calls.
    - `pullMostRecentPosts(accessToken, userId, postCount)` paginates through `paging.next` URLs until
      it has collected exactly `postCount` posts (or the account runs out), rather than issuing a
@@ -98,14 +98,15 @@ All paths below are relative to `scripts/` unless stated otherwise.
      account (profile views ~16K vs. content views ~1.36M over the same 30-day window) — a user
      comparing the app's "Views" against this site's old profile-views-only tile is why this metric got
      added. Same `metric_type=total_value` shape as `profile_views`.
-   - `pullNewFollowersLastNDays` pulls `follows_and_unfollows` with `breakdown=follow_type` and returns
-     just the `FOLLOWER` dimension's value (new follows in the window) — the `NON_FOLLOWER` dimension
-     (unfollows/account deletions) is available in the same response but intentionally not surfaced,
-     since this is specifically "new followers," not net change. This is a real API window total, unlike
-     comparing the point-in-time follower count between two pulls (which conflates new follows with
-     unfollows, and is close to meaningless when pulls are only hours apart rather than a full window —
-     confirmed this was the actual source of a follower-count discrepancy a user noticed against the
-     app).
+   - `pullNetFollowersLastNDays` pulls `follows_and_unfollows` with `breakdown=follow_type` and returns
+     `FOLLOWER - NON_FOLLOWER` (new follows minus unfollows/account deletions) — matching the "Net
+     followers" figure Instagram's own app shows on its Insights overview screen. (An earlier version of
+     this returned just the `FOLLOWER` count as "new followers," which a user caught by comparing
+     against a screenshot of the app: the app's own number is explicitly net, not gross new follows —
+     confirmed live that `FOLLOWER - NON_FOLLOWER` lines up closely with the app's reported figure for
+     the same window, small gaps expected purely from pull-timing.) This is a real API window total,
+     unlike comparing the point-in-time follower count between two pulls (close to meaningless when
+     pulls are only hours apart rather than a full window).
    - `pullFollowerDemographics(accessToken, userId, breakdown)` pulls the `follower_demographics`
      metric — also `metric_type=total_value`, `period=lifetime` (a current-snapshot value, not a
      day-window one). `breakdown` accepts `"age,gender"` (combined), `"country"`, or `"city"`; confirmed
@@ -130,7 +131,7 @@ All paths below are relative to `scripts/` unless stated otherwise.
      mode computes days between `cutoffDate` and now; `"posts"` mode estimates the span via
      `daysSpannedByPosts` (days between the oldest pulled post and now). The same window is used for all
      four calls; the actual value is stored per-metric as `accountReachWindowDays` /
-     `profileViewsWindowDays` / `viewsWindowDays` / `newFollowersWindowDays` so it's always traceable per
+     `profileViewsWindowDays` / `viewsWindowDays` / `netFollowersWindowDays` so it's always traceable per
      snapshot.
    - `buildPulledSetSummary` aggregates totals across the pulled set, tagged with `pullMode` and
      `pullValue` so each snapshot is self-describing. Stored under the `pulledSetSummary` key. (Older
@@ -179,12 +180,14 @@ All paths below are relative to `scripts/` unless stated otherwise.
   what "engagement rate" means. Static content, not data-driven.
 - **Layout is split by what's actually filterable**, so a filter control always sits directly above the
   content it scopes rather than floating above the whole page implying it controls everything:
-  - `#kpiRowFixed` (Followers, New followers, Views, Account reach, Profile views) renders once at boot
+  - `#kpiRowFixed` (Followers, Net followers, Views, Account reach, Profile views) renders once at boot
     via `renderFixedKpiRow()` and never changes with the filter — these are point-in-time/fixed-window
     API values a client-side date filter can't meaningfully reslice. It sits directly under the
     masthead, with no filter control anywhere near it. The four window-based tiles (everything except
     Followers itself) share one `buildWindowedStatTile()` helper for the "As pulled, last N days" label
-    + delta pattern, rather than repeating it per tile.
+    + delta pattern, rather than repeating it per tile; its `signed` param prefixes a `+` on positive
+    values for net-change metrics (used for Net followers only — the other three are magnitudes, not
+    deltas).
   - The `#rangeSelect` (`Time range`: 1/5/7/30 days — no "all time" option, since it would just show
     the same 30 days every time; capped at 30 to match the workflow's default pull window, see Storage
     & automation) lives in a `.section-heading` labeled "Performance trends", positioned immediately

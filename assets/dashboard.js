@@ -205,11 +205,16 @@
   }
 
   // Shared by every "fixed window" API metric (account reach, profile
-  // views, content views, new followers) - each is a total over its own
+  // views, content views, net followers) - each is a total over its own
   // windowDays, pulled fresh every run, not something a client-side date
-  // filter can reslice.
-  function buildWindowedStatTile(label, value, windowDays, previousValue) {
-    return buildStatTile(label, value === null || value === undefined ? "—" : formatCompactNumber(value), function (tile) {
+  // filter can reslice. signed=true prefixes a "+" on positive values, for
+  // net-change metrics (net followers) rather than plain magnitudes.
+  function buildWindowedStatTile(label, value, windowDays, previousValue, signed) {
+    var valueText = "—";
+    if (value !== null && value !== undefined) {
+      valueText = (signed && value > 0 ? "+" : "") + formatCompactNumber(value);
+    }
+    return buildStatTile(label, valueText, function (tile) {
       var note = document.createElement("p");
       note.className = "stat-delta flat";
       note.textContent = windowDays
@@ -242,7 +247,7 @@
     );
 
     container.appendChild(buildWindowedStatTile(
-      "New followers", latest.summary.newFollowers, latest.summary.newFollowersWindowDays, previousSummary.newFollowers
+      "Net followers", latest.summary.netFollowers, latest.summary.netFollowersWindowDays, previousSummary.netFollowers, true
     ));
 
     container.appendChild(buildWindowedStatTile(
