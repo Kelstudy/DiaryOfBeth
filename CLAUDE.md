@@ -30,9 +30,10 @@ INSTAGRAM_REDIRECT_URI=https://localhost/
   date onward) — never combined, so requesting "30 days" can't silently get capped at "10 posts".
   Enter accepts the day/post-count defaults (30 days / 10 posts); the date mode always requires
   explicit input. Then builds one JSON snapshot and appends it to `data/statsHistory.json`, skipping
-  the save if nothing changed since the last run. Interactive prompts mean this isn't yet cron-friendly
-  as-is — that'll need addressing when GitHub Actions automation is set up (e.g. env var / CLI arg
-  overrides).
+  the save if nothing changed since the last run.
+- `python pullData.py --mode {days,posts,date} --value VALUE` — same collector, non-interactive.
+  Skips the prompts entirely; used by the GitHub Actions workflow. `--mode` and `--value` must be
+  given together. Example: `python pullData.py --mode days --value 30`.
 
 There is no test suite, linter, or build step configured.
 
@@ -103,15 +104,26 @@ There is no test suite, linter, or build step configured.
 ## Storage & automation
 
 - No database. Pulled data appends as timestamped snapshots to `data/statsHistory.json`.
-- Automation is planned as a GitHub Actions scheduled workflow that runs `pullData.py` and commits the
-  updated JSON — not yet set up in this repo. Daily cadence (not more frequent) is the intended
-  default, given the API call volume of a full 30-day pull, to stay within rate limits.
+- `.github/workflows/pull-stats.yml` runs `pullData.py` on a daily cron (07:00 UTC) — daily, not more
+  frequent, given the API call volume of a full N-day pull (one insights call per post), to stay
+  within rate limits. Also runnable manually via `workflow_dispatch` with `mode`/`value` inputs
+  (defaults: `days` / `30`).
+  - **Requires a repo secret named `INSTAGRAM_TOKEN_JSON`** containing the exact contents of a valid
+    `token.json` (i.e. the file `getAccessToken.py` produces). The workflow writes that secret out to
+    `token.json` on the runner before calling `pullData.py`; nothing token-related ever gets committed
+    (`git add` in the workflow only stages `data/statsHistory.json`).
+  - Because the long-lived token expires after ~60 days and there's no refresh script in this repo yet
+    (see `getAccessToken.py`'s docstring re: a not-yet-present `refreshToken.py`), the secret needs
+    manual re-rotation periodically — re-run `getAccessToken.py` locally and update the
+    `INSTAGRAM_TOKEN_JSON` secret before the current token expires, or the scheduled runs will start
+    failing.
 
 ## Open items / known gaps
 
 - Frontend dashboard (GitHub Pages, follower growth chart, engagement trend, top posts gallery) does
   not exist yet.
-- GitHub Actions scheduled workflow not yet set up.
+- No token-refresh automation — the `INSTAGRAM_TOKEN_JSON` secret must be updated by hand every ~60
+  days (see Storage & automation above).
 - **Security**: an earlier access token was exposed in a chat session and has since been rotated via
   `getAccessToken.py`.
 - Trial reels (Instagram creates several distinct REELS media IDs per trial reel upload, seconds

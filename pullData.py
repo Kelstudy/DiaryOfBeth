@@ -17,10 +17,17 @@ date" - never combined, so asking for 30 days and 10 posts can't silently
 cap you at 10 posts. The since-date mode treats the date as starting at
 midnight UTC, so that date's own posts are included.
 
-Run with:
+Passing --mode and --value skips the prompts entirely, for non-interactive
+use (e.g. a GitHub Actions cron job, which has no terminal to type into):
+  python pullData.py --mode days --value 30
+  python pullData.py --mode posts --value 10
+  python pullData.py --mode date --value 2026-07-01
+
+Run interactively with:
   python pullData.py
 """
 
+import argparse
 import json
 import os
 from datetime import datetime, timezone
@@ -262,10 +269,54 @@ def promptForPullMode():
     return "days", windowDays
 
 
+def parseArgs():
+    """Parse optional --mode/--value CLI args for non-interactive runs."""
+    parser = argparse.ArgumentParser(description="Pull Instagram stats into data/statsHistory.json")
+    parser.add_argument(
+        "--mode",
+        choices=["days", "posts", "date"],
+        help="Pull mode. Requires --value. Omit both --mode and --value to be prompted interactively.",
+    )
+    parser.add_argument(
+        "--value",
+        help="Value for --mode: a positive integer for 'days'/'posts', or YYYY-MM-DD for 'date'.",
+    )
+    args = parser.parse_args()
+
+    if bool(args.mode) != bool(args.value):
+        parser.error("--mode and --value must be provided together.")
+
+    return args
+
+
+def resolvePullModeFromArgs(mode, rawValue):
+    """Validate and convert CLI --mode/--value into (pullMode, pullValue), or exit with an error."""
+    if mode == "date":
+        try:
+            datetime.strptime(rawValue, "%Y-%m-%d")
+        except ValueError:
+            raise SystemExit(f"--value must be YYYY-MM-DD for --mode date, got: {rawValue!r}")
+        return "date", rawValue
+
+    try:
+        parsedValue = int(rawValue)
+    except ValueError:
+        raise SystemExit(f"--value must be a whole number for --mode {mode}, got: {rawValue!r}")
+
+    if parsedValue <= 0:
+        raise SystemExit(f"--value must be positive for --mode {mode}, got: {parsedValue}")
+
+    return mode, parsedValue
+
+
 def main():
     accessToken, userId = loadToken()
 
-    pullMode, pullValue = promptForPullMode()
+    args = parseArgs()
+    if args.mode:
+        pullMode, pullValue = resolvePullModeFromArgs(args.mode, args.value)
+    else:
+        pullMode, pullValue = promptForPullMode()
 
     print("Pulling latest Instagram stats...")
     newSnapshot = buildSnapshot(accessToken, userId, pullMode, pullValue)
