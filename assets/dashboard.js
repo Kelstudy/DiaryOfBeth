@@ -823,6 +823,7 @@
     var tabs = [
       { btn: document.getElementById("tabBtnOverview"), panel: document.getElementById("tabOverview") },
       { btn: document.getElementById("tabBtnAudience"), panel: document.getElementById("tabAudience") },
+      { btn: document.getElementById("tabBtnCollabs"), panel: document.getElementById("tabCollabs") },
     ];
 
     tabs.forEach(function (tab) {

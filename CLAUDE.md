@@ -141,14 +141,18 @@ All paths below are relative to `scripts/` unless stated otherwise.
   `audienceDemographics` passes through as-is, `null` for older entries that predate it), then renders
   a masthead (avatar photo, username, `formatAccountType()`-title-cased account type, following/posts/
   followers counts) plus two tabs — see Filters and Tabs below.
-- **Two tabs** (`#tabBtnOverview` / `#tabBtnAudience`, plain `hidden`-attribute show/hide via
-  `setupTabs()`, no routing): **Overview** is everything described below under Filters; **Audience**
-  renders the latest pull's `audienceDemographics` once at boot (not re-scoped by the time range
-  filter, which only governs the Overview tab, since demographics are a lifetime/current-snapshot
+- **Three tabs** (`#tabBtnOverview` / `#tabBtnAudience` / `#tabBtnCollabs`, plain `hidden`-attribute
+  show/hide via `setupTabs()`, no routing): **Overview** is everything described below under Filters;
+  **Audience** renders the latest pull's `audienceDemographics` once at boot (not re-scoped by the time
+  range filter, which only governs the Overview tab, since demographics are a lifetime/current-snapshot
   value, not a day-window one) — a hand-rolled SVG grouped bar chart (`renderAgeGenderChart`, age
   bracket × gender, 3-series categorical with legend + per-bar hover tooltip) plus two `renderRankList`
   calls (top 8 countries via `formatCountryName()`'s ISO code lookup, top 8 cities) sharing one ranked
-  list-with-proportional-bar component rather than a second chart type.
+  list-with-proportional-bar component rather than a second chart type; **Collabs** is entirely static
+  placeholder content in `index.html` (rate card, "what's included," contact details) — not
+  data-driven, not touched by `dashboard.js` at all beyond the tab show/hide. Every value that needs
+  replacing before sharing the page externally is marked `PLACEHOLDER` (rates, email, turnaround times)
+  — search `index.html` for that string to find them all.
 - The masthead avatar is a static file at `assets/profile.jpg` (not pulled from the API — Instagram's
   Graph API doesn't expose a fetchable profile picture URL for this product), referenced directly in
   `index.html`. Replace that file to change the photo; no code change needed.
