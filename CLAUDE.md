@@ -170,10 +170,11 @@ All paths below are relative to `scripts/` unless stated otherwise.
   bracket × gender, 3-series categorical with legend + per-bar hover tooltip) plus two `renderRankList`
   calls (top 8 countries via `formatCountryName()`'s ISO code lookup, top 8 cities) sharing one ranked
   list-with-proportional-bar component rather than a second chart type; **Collabs** is entirely static
-  placeholder content in `index.html` (rate card, "what's included," contact details) — not
-  data-driven, not touched by `dashboard.js` at all beyond the tab show/hide. Every value that needs
-  replacing before sharing the page externally is marked `PLACEHOLDER` (rates, email, turnaround times)
-  — search `index.html` for that string to find them all.
+  content in `index.html` (a real personal bio in the `.explainer` card, then rate card, "what's
+  included," contact details) — not data-driven, not touched by `dashboard.js` at all beyond the tab
+  show/hide. Every value that still needs replacing before sharing the page externally is marked
+  `PLACEHOLDER` (rates, email, turnaround times) — search `index.html` for that string to find them
+  all; the bio itself is real, supplied by the account owner, not a placeholder.
 - The masthead avatar is a static file at `assets/profile.jpg` (not pulled from the API — Instagram's
   Graph API doesn't expose a fetchable profile picture URL for this product), referenced directly in
   `index.html`. Replace that file to change the photo; no code change needed. It renders inside
