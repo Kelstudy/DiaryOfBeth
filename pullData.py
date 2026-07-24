@@ -1,14 +1,16 @@
 """
 pullData.py
 
-The real, automated data-collection script. Reuses the pull logic already
-proven out in testPull.py, but instead of printing to the terminal, it
-packages everything into one JSON "snapshot" record and appends it to a
-running history file (data/statsHistory.json).
+The real, automated data-collection script. Uses the shared pull logic in
+igApi.py and packages everything into one JSON "snapshot" record, appended
+to a running history file (data/statsHistory.json).
 
 This is what the GitHub Actions cron job will run on a schedule. Each run
 adds one new entry to the history, which is what powers the growth charts
-and "top posts" gallery on the frontend later.
+and "top posts" gallery on the frontend later. If a run's snapshot is
+identical (aside from the timestamp) to the last saved one - e.g. the script
+was re-run with nothing new to report - it is skipped instead of appended,
+to keep the history free of no-op duplicates.
 
 Run with:
   python pullData.py
@@ -18,7 +20,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from testPull import (
+from igApi import (
     loadToken,
     pullProfile,
     pullRecentMedia,
@@ -157,6 +159,25 @@ def saveHistory(dataFilePath, historyRecords):
         json.dump(historyRecords, historyFile, indent=2)
 
 
+def isDuplicateOfLastSnapshot(newSnapshot, historyRecords):
+    """
+    Check whether newSnapshot carries no new information compared to the
+    most recent saved snapshot - i.e. everything except "pulledAt" is
+    identical. This catches accidental back-to-back re-runs (nothing
+    changed since last pull) without ever discarding a run that captured
+    real movement in followers, likes, or insights.
+    """
+    if not historyRecords:
+        return False
+
+    lastSnapshot = historyRecords[-1]
+
+    comparableNew = {key: value for key, value in newSnapshot.items() if key != "pulledAt"}
+    comparableLast = {key: value for key, value in lastSnapshot.items() if key != "pulledAt"}
+
+    return comparableNew == comparableLast
+
+
 def main():
     accessToken, userId = loadToken()
 
@@ -164,6 +185,11 @@ def main():
     newSnapshot = buildSnapshot(accessToken, userId)
 
     historyRecords = loadExistingHistory(DATA_FILE_PATH)
+
+    if isDuplicateOfLastSnapshot(newSnapshot, historyRecords):
+        print("No change since the last saved snapshot - skipping save to avoid a duplicate entry.")
+        return
+
     historyRecords.append(newSnapshot)
     saveHistory(DATA_FILE_PATH, historyRecords)
 
