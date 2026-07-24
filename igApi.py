@@ -23,14 +23,6 @@ DETAILED_POST_COUNT = 10
 # as many pages as needed until a post older than 30 days is reached.
 MONTHLY_SCAN_PAGE_SIZE = 25
 
-# Instagram appears to create several near-duplicate REELS media items per
-# trial reel upload (confirmed via inspectMedia.py - e.g. 4 distinct media
-# IDs published within 9 seconds of each other, each with real but separate
-# engagement, and no API field reliably flags them as trial variants). Posts
-# of type REELS published within this many seconds of each other are treated
-# as one trial reel cluster and collapsed to a single entry.
-TRIAL_REEL_CLUSTER_SECONDS = 60
-
 
 def loadToken(tokenPath="token.json"):
     """Load the access token saved by getAccessToken.py."""
@@ -57,59 +49,6 @@ def pullProfile(accessToken, userId):
     return response.json()
 
 
-def secondsBetweenTimestamps(firstTimestamp, secondTimestamp):
-    """Return the gap in seconds between two ISO timestamps, or None if unparseable."""
-    try:
-        firstDate = datetime.fromisoformat(firstTimestamp)
-        secondDate = datetime.fromisoformat(secondTimestamp)
-    except (ValueError, TypeError):
-        return None
-
-    return abs((firstDate - secondDate).total_seconds())
-
-
-def collapseTrialReelClusters(mediaItems):
-    """
-    Collapse near-simultaneous REELS entries (published within
-    TRIAL_REEL_CLUSTER_SECONDS of each other) down to a single post - the
-    one with the most likes, treated as the graduated/winning variant.
-    Without this, each trial variant would get counted as a separate post
-    and skew post counts and engagement/summary stats. Non-REELS posts and
-    isolated REELS are left untouched.
-    """
-    if not mediaItems:
-        return mediaItems
-
-    collapsedItems = []
-    clusterBuffer = [mediaItems[0]]
-
-    def flushCluster():
-        if len(clusterBuffer) == 1:
-            collapsedItems.append(clusterBuffer[0])
-        else:
-            winner = max(clusterBuffer, key=lambda item: item.get("like_count", 0))
-            collapsedItems.append(winner)
-
-    for previousItem, currentItem in zip(mediaItems, mediaItems[1:]):
-        gapSeconds = secondsBetweenTimestamps(
-            previousItem.get("timestamp"), currentItem.get("timestamp")
-        )
-        sameCluster = (
-            previousItem.get("media_product_type") == "REELS"
-            and currentItem.get("media_product_type") == "REELS"
-            and gapSeconds is not None
-            and gapSeconds <= TRIAL_REEL_CLUSTER_SECONDS
-        )
-        if sameCluster:
-            clusterBuffer.append(currentItem)
-        else:
-            flushCluster()
-            clusterBuffer = [currentItem]
-
-    flushCluster()
-    return collapsedItems
-
-
 def pullRecentMedia(accessToken, userId, mediaLimit):
     """Pull the most recent posts with basic engagement fields."""
     mediaFields = (
@@ -122,7 +61,7 @@ def pullRecentMedia(accessToken, userId, mediaLimit):
         params={"fields": mediaFields, "limit": mediaLimit, "access_token": accessToken},
     )
     response.raise_for_status()
-    return collapseTrialReelClusters(response.json().get("data", []))
+    return response.json().get("data", [])
 
 
 def pullMediaWithinLast30Days(accessToken, userId):
@@ -177,7 +116,7 @@ def pullMediaWithinLast30Days(accessToken, userId):
         requestParams = None
 
     print(f"  (scanned {pageCount} page(s) of posts to find everything in the last 30 days)")
-    return collapseTrialReelClusters(collectedItems)
+    return collectedItems
 
 
 def getMetricListForProductType(productType):

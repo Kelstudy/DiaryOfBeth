@@ -54,14 +54,6 @@ There is no test suite, linter, or build step configured.
      `pullAccountReachLast30Days` — the API calls.
    - `pullMediaWithinLast30Days` paginates through `paging.next` URLs until it hits a post older than
      30 days (posts come back newest-first), so the 30-day set is exact, not capped by page size.
-   - `collapseTrialReelClusters` filters out trial-reel duplicates: Instagram creates several distinct
-     REELS media IDs per trial reel upload, each with its own real (but partial) engagement, published
-     within seconds of each other. Confirmed live via `inspectMedia.py` — no API field (including
-     `is_shared_to_feed`, which was tested and ruled out: it varies independently and doesn't
-     correlate with clustering) reliably flags them. The working heuristic is timing: REELS posts
-     within `TRIAL_REEL_CLUSTER_SECONDS` (60s) of each other are collapsed to the single
-     highest-`like_count` variant. Applied inside `pullRecentMedia` and `pullMediaWithinLast30Days`,
-     so both feed real (non-inflated) post data to `pullData.py` automatically.
    - `getMetricListForProductType` — Reels support `reach`, `views`, `saved`, `shares`,
      `total_interactions` but **not** `impressions`; photos/carousels are expected to use
      `impressions` instead of `views` (confirmed live for Reels; not yet confirmed live for
@@ -97,3 +89,10 @@ There is no test suite, linter, or build step configured.
 - GitHub Actions scheduled workflow not yet set up.
 - **Security**: an earlier access token was exposed in a chat session and has since been rotated via
   `getAccessToken.py`.
+- Trial reels (Instagram creates several distinct REELS media IDs per trial reel upload, seconds
+  apart) show up as separate posts in pulls, inflating post counts and stats. A timing-based filter
+  (collapsing REELS posted within 60s of each other) was tried and reverted — it risked dropping
+  legitimate posts made in quick succession, since no API field reliably distinguishes trial reels
+  from real ones (`is_shared_to_feed` was tested and ruled out). `inspectMedia.py` remains in the repo
+  as a diagnostic. Planned approach instead: tag trial-reel captions manually going forward and filter
+  on that tag, once there's a labeled example to build against.
