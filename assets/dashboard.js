@@ -839,6 +839,12 @@
           other.btn.setAttribute("aria-selected", isActive ? "true" : "false");
           other.panel.hidden = !isActive;
         });
+        // Re-trigger the fade-in animation on every activation, including
+        // repeat clicks on an already-styled panel - remove the class,
+        // force a reflow, then re-add it.
+        tab.panel.classList.remove("tab-panel-enter");
+        void tab.panel.offsetWidth;
+        tab.panel.classList.add("tab-panel-enter");
       });
     });
   }

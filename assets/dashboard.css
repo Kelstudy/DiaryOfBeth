@@ -20,6 +20,12 @@
   --series-3:       #199e70;
   --good:           #0ca30c;
   --bad:            #e66767;
+
+  /* Decorative brand accent only - approximates Instagram's own gradient.
+     Never used for chart marks/data encoding, which stay on the
+     validated dataviz palette above (--series-*). Reserved for chrome:
+     avatar ring, primary CTA, tab indicator, a couple of accent borders. */
+  --ig-gradient: linear-gradient(45deg, #feda75 0%, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5 100%);
 }
 
 * { box-sizing: border-box; }
@@ -30,6 +36,13 @@ html, body {
   background: var(--page-plane);
   color: var(--text-primary);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  /* Faint radial glow behind the masthead for depth - subtle enough not
+     to compete with any content, dark-mode-safe. */
+  background-image: radial-gradient(ellipse 900px 400px at 50% -10%, rgba(150, 47, 191, 0.10), transparent 70%);
+  background-repeat: no-repeat;
 }
 
 .page {
@@ -54,20 +67,29 @@ html, body {
   gap: 16px;
 }
 
-.avatar {
-  width: 56px;
-  height: 56px;
+.avatar-ring {
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   flex-shrink: 0;
+  padding: 3px;
+  background: var(--ig-gradient);
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
   object-fit: cover;
-  background: radial-gradient(circle at 30% 30%, var(--series-1), #1c5cab);
-  border: 2px solid var(--border);
+  background: var(--surface-1);
+  border: 2px solid var(--page-plane);
 }
 
 .masthead h1 {
   margin: 0;
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
 
@@ -86,9 +108,32 @@ html, body {
   border-radius: 8px;
   border: 1px solid var(--border);
   white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.btn-outline:hover { background: rgba(255, 255, 255, 0.06); }
+.btn-outline:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.2); }
+
+.btn-gradient {
+  display: inline-block;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: none;
+  white-space: nowrap;
+  background: var(--ig-gradient);
+  background-size: 150% 150%;
+  background-position: 0% 50%;
+  transition: background-position 0.3s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-gradient:hover {
+  background-position: 100% 50%;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(214, 41, 118, 0.35);
+}
 
 .asof {
   margin: 16px 0 20px;
@@ -99,12 +144,23 @@ html, body {
 /* ---------- Explainer ---------- */
 
 .explainer {
+  position: relative;
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--series-1);
   border-radius: 10px;
-  padding: 16px 20px;
+  padding: 16px 20px 16px 23px;
   margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.explainer::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ig-gradient);
 }
 
 .explainer h2 {
@@ -200,7 +256,10 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px 18px;
+  transition: border-color 0.15s ease;
 }
+
+.stat-tile:hover { border-color: rgba(255, 255, 255, 0.18); }
 
 .stat-label {
   margin: 0 0 8px;
@@ -242,7 +301,10 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 20px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
 }
+
+.card:hover { border-color: rgba(255, 255, 255, 0.18); }
 
 .card-head h2 {
   margin: 0;
@@ -323,17 +385,25 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
-.post-card:hover { border-color: var(--series-1); }
+.post-card:hover {
+  border-color: rgba(214, 41, 118, 0.5);
+  transform: translateY(-2px);
+}
 
 .post-type {
+  display: inline-block;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--series-1);
   margin-bottom: 6px;
+  background: var(--ig-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .post-caption {
@@ -375,24 +445,52 @@ html, body {
 }
 
 .tab-btn {
+  position: relative;
   appearance: none;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
   color: var(--text-secondary);
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
-  padding: 10px 4px;
+  padding: 10px 4px 12px;
   margin-right: 20px;
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.tab-btn::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--ig-gradient);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
 }
 
 .tab-btn:hover { color: var(--text-primary); }
 
 .tab-btn[aria-selected="true"] {
   color: var(--text-primary);
-  border-bottom-color: var(--series-1);
+}
+
+.tab-btn[aria-selected="true"]::after {
+  transform: scaleX(1);
+}
+
+/* Fade the panel in on activation - setupTabs() toggles this class
+   alongside the hidden attribute. */
+.tab-panel-enter {
+  animation: tabFadeIn 0.2s ease;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ---------- Legend ---------- */
@@ -496,7 +594,10 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px 16px;
+  transition: border-color 0.15s ease;
 }
+
+.rate-item:hover { border-color: rgba(214, 41, 118, 0.4); }
 
 .rate-label {
   margin: 0 0 6px;
@@ -510,8 +611,11 @@ html, body {
 .rate-price {
   margin: 0 0 8px;
   font-size: 22px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-weight: 800;
+  background: var(--ig-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .rate-desc {

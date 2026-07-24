@@ -216,6 +216,15 @@ All paths below are relative to `scripts/` unless stated otherwise.
 - Dark-only (no light-mode toggle) — deliberate, per the dark-themed aesthetic above, not an
   oversight. Colors are the dataviz skill's default validated palette (dark column): series blue
   `#3987e5`, good/bad deltas `#0ca30c`/`#e66767`, chart surface `#1a1a19` on page plane `#0d0d0d`.
+- **`--ig-gradient`** (a CSS var approximating Instagram's own brand gradient) is reserved for
+  decorative chrome only — the avatar ring, the primary CTA buttons (`.btn-gradient`), the tab
+  underline, the explainer card's accent border, post-type tags, and rate-card prices. It is never
+  used on anything that encodes data (chart marks, KPI values, rank-list bars all stay on the
+  validated dataviz palette above) — mixing a decorative rainbow gradient into data encoding would
+  break the "never a rainbow" categorical-color rule the dataviz skill enforces elsewhere on this page.
+- Tab switches trigger a short fade/slide-in (`.tab-panel-enter`, re-triggered on every click via a
+  remove-reflow-readd cycle in `setupTabs()`) rather than an instant `hidden` toggle — purely cosmetic
+  polish, doesn't change what's shown.
 - Live at `https://kelstudy.github.io/DiaryOfBeth/` via GitHub Pages (Settings → Pages → Deploy from
   branch → `main` / `(root)`).
 
