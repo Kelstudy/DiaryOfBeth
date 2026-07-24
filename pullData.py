@@ -11,8 +11,9 @@ identical (aside from the timestamp) to the last saved one - e.g. the script
 was re-run with nothing new to report - it is skipped instead of appended,
 to keep the history free of no-op duplicates.
 
-On start, it prompts for how many days of posts to summarize and how many
-recent posts to pull in full detail (press Enter to accept the defaults).
+On start, it prompts for exactly one pull mode - either "pull every post
+from the last N days" or "pull exactly N posts" - never both at once, so
+asking for 30 days and 10 posts can't silently cap you at 10 posts.
 
 Run with:
   python pullData.py
@@ -25,12 +26,12 @@ from datetime import datetime, timezone
 from igApi import (
     loadToken,
     pullProfile,
-    pullRecentMedia,
+    pullMostRecentPosts,
     pullMediaInsights,
     pullMediaWithinLastNDays,
     pullAccountReachLastNDays,
     calculateEngagementRate,
-    DETAILED_POST_COUNT,
+    DEFAULT_POST_COUNT,
 )
 
 DATA_FILE_PATH = os.path.join("data", "statsHistory.json")
@@ -52,8 +53,8 @@ def buildPostRecord(mediaItem, followersCount, insightValues):
     }
 
 
-def buildWindowSummary(mediaItems, insightsByMediaId, followersCount):
-    """Aggregate totals across the requested day-window post set for storage."""
+def buildPulledSetSummary(mediaItems, insightsByMediaId, followersCount):
+    """Aggregate totals across the pulled post set for storage."""
     if not mediaItems:
         return {
             "postsCounted": 0,
@@ -89,7 +90,26 @@ def buildWindowSummary(mediaItems, insightsByMediaId, followersCount):
     }
 
 
-def buildSnapshot(accessToken, userId, windowDays, detailedPostCount):
+def daysSpannedByPosts(mediaItems, fallbackDays):
+    """
+    Estimate how many days the pulled posts span, for sizing the account-level
+    reach query when pulling by post count rather than by day window (that
+    endpoint needs a since/until range, not a post count).
+    """
+    if not mediaItems:
+        return fallbackDays
+
+    oldestTimestamp = min(mediaItems, key=lambda item: item.get("timestamp", "")).get("timestamp")
+    try:
+        oldestDate = datetime.fromisoformat(oldestTimestamp)
+    except (ValueError, TypeError):
+        return fallbackDays
+
+    spanDays = (datetime.now(timezone.utc) - oldestDate).days + 1
+    return max(spanDays, 1)
+
+
+def buildSnapshot(accessToken, userId, pullMode, pullValue):
     """Run all the pulls and assemble one complete snapshot record."""
     profileData = pullProfile(accessToken, userId)
     followersCount = profileData.get("followers_count", 0)
@@ -102,47 +122,44 @@ def buildSnapshot(accessToken, userId, windowDays, detailedPostCount):
         "mediaCount": profileData.get("media_count"),
     }
 
-    recentMediaItems = pullRecentMedia(accessToken, userId, mediaLimit=detailedPostCount)
+    if pullMode == "days":
+        mediaItems = pullMediaWithinLastNDays(accessToken, userId, pullValue)
+        reachWindowDays = pullValue
+    else:
+        mediaItems = pullMostRecentPosts(accessToken, userId, pullValue)
+        reachWindowDays = daysSpannedByPosts(mediaItems, fallbackDays=DEFAULT_WINDOW_DAYS)
 
-    recentInsightsByMediaId = {}
-    for mediaItem in recentMediaItems:
+    totalPosts = len(mediaItems)
+    print(f"  Found {totalPosts} post(s) to pull - pulling insights for each...")
+
+    insightsByMediaId = {}
+    for postIndex, mediaItem in enumerate(mediaItems, start=1):
         productType = mediaItem.get("media_product_type", "")
-        recentInsightsByMediaId[mediaItem["id"]] = pullMediaInsights(
+        insightsByMediaId[mediaItem["id"]] = pullMediaInsights(
             accessToken, mediaItem["id"], productType
         )
+        if postIndex % 10 == 0 or postIndex == totalPosts:
+            print(f"    ...{postIndex}/{totalPosts} insight pulls done")
 
-    recentPostRecords = [
-        buildPostRecord(mediaItem, followersCount, recentInsightsByMediaId.get(mediaItem["id"], {}))
-        for mediaItem in recentMediaItems
+    postRecords = [
+        buildPostRecord(mediaItem, followersCount, insightsByMediaId.get(mediaItem["id"], {}))
+        for mediaItem in mediaItems
     ]
 
-    windowMediaItems = pullMediaWithinLastNDays(accessToken, userId, windowDays)
-    totalWindowPosts = len(windowMediaItems)
-    print(f"  Found {totalWindowPosts} post(s) in the last {windowDays} day(s) - pulling insights for each...")
+    pulledSetSummary = buildPulledSetSummary(mediaItems, insightsByMediaId, followersCount)
+    pulledSetSummary["pullMode"] = pullMode
+    pulledSetSummary["pullValue"] = pullValue
 
-    windowInsightsByMediaId = {}
-    for postIndex, mediaItem in enumerate(windowMediaItems, start=1):
-        productType = mediaItem.get("media_product_type", "")
-        windowInsightsByMediaId[mediaItem["id"]] = pullMediaInsights(
-            accessToken, mediaItem["id"], productType
-        )
-        if postIndex % 10 == 0 or postIndex == totalWindowPosts:
-            print(f"    ...{postIndex}/{totalWindowPosts} insight pulls done")
-
-    windowSummary = buildWindowSummary(
-        windowMediaItems, windowInsightsByMediaId, followersCount
-    )
-    windowSummary["windowDays"] = windowDays
-
-    totalAccountReach, reachError = pullAccountReachLastNDays(accessToken, userId, windowDays)
-    windowSummary["accountReachSummed"] = totalAccountReach
-    windowSummary["accountReachError"] = reachError
+    totalAccountReach, reachError = pullAccountReachLastNDays(accessToken, userId, reachWindowDays)
+    pulledSetSummary["accountReachWindowDays"] = reachWindowDays
+    pulledSetSummary["accountReachSummed"] = totalAccountReach
+    pulledSetSummary["accountReachError"] = reachError
 
     return {
         "pulledAt": datetime.now(timezone.utc).isoformat(),
         "profile": profileRecord,
-        "recentPosts": recentPostRecords,
-        "recentWindow": windowSummary,
+        "recentPosts": postRecords,
+        "pulledSetSummary": pulledSetSummary,
     }
 
 
@@ -202,18 +219,33 @@ def promptForPositiveInt(promptText, defaultValue):
     return parsedValue
 
 
+def promptForPullMode():
+    """
+    Ask the user to choose exactly one way to select posts: by day window
+    (every post from the last N days, however many that is) or by post
+    count (exactly N most recent posts, however far back that reaches).
+    Returns (pullMode, pullValue).
+    """
+    print("How should posts be pulled?")
+    print("  1) By number of days - pulls every post from that many days back")
+    print("  2) By number of posts - pulls exactly that many most recent posts")
+    choice = input("Choose 1 or 2 [default 1]: ").strip()
+
+    if choice == "2":
+        postCount = promptForPositiveInt("How many posts to pull?", DEFAULT_POST_COUNT)
+        return "posts", postCount
+
+    windowDays = promptForPositiveInt("How many days to pull?", DEFAULT_WINDOW_DAYS)
+    return "days", windowDays
+
+
 def main():
     accessToken, userId = loadToken()
 
-    windowDays = promptForPositiveInt(
-        "How many days of posts to summarize?", DEFAULT_WINDOW_DAYS
-    )
-    detailedPostCount = promptForPositiveInt(
-        "How many recent posts to pull in full detail?", DETAILED_POST_COUNT
-    )
+    pullMode, pullValue = promptForPullMode()
 
     print("Pulling latest Instagram stats...")
-    newSnapshot = buildSnapshot(accessToken, userId, windowDays, detailedPostCount)
+    newSnapshot = buildSnapshot(accessToken, userId, pullMode, pullValue)
 
     historyRecords = loadExistingHistory(DATA_FILE_PATH)
 

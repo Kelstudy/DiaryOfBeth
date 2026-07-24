@@ -15,8 +15,8 @@ import requests
 
 BASE_URL = "https://graph.instagram.com"
 
-# How many of the most recent posts to pull in full detail.
-DETAILED_POST_COUNT = 10
+# Default post count when pulling by post count rather than by day window.
+DEFAULT_POST_COUNT = 10
 
 # Page size used while paginating through posts to build the N-day overview.
 # This does NOT cap how many posts get counted - pagination continues across
@@ -49,19 +49,44 @@ def pullProfile(accessToken, userId):
     return response.json()
 
 
-def pullRecentMedia(accessToken, userId, mediaLimit):
-    """Pull the most recent posts with basic engagement fields."""
+def pullMostRecentPosts(accessToken, userId, postCount):
+    """
+    Paginate through posts (newest first) and collect exactly postCount of
+    them (or fewer, if the account has posted less than that). Paginates
+    rather than issuing a single request with limit=postCount, since a
+    large postCount can exceed what the API returns in one page.
+    """
     mediaFields = (
         "id,caption,media_type,media_product_type,"
         "timestamp,permalink,like_count,comments_count"
     )
 
-    response = requests.get(
-        f"{BASE_URL}/{userId}/media",
-        params={"fields": mediaFields, "limit": mediaLimit, "access_token": accessToken},
-    )
-    response.raise_for_status()
-    return response.json().get("data", [])
+    requestUrl = f"{BASE_URL}/{userId}/media"
+    requestParams = {
+        "fields": mediaFields,
+        "limit": min(SCAN_PAGE_SIZE, postCount),
+        "access_token": accessToken,
+    }
+
+    collectedItems = []
+
+    while requestUrl and len(collectedItems) < postCount:
+        response = requests.get(requestUrl, params=requestParams)
+        response.raise_for_status()
+        responseData = response.json()
+
+        collectedItems.extend(responseData.get("data", []))
+
+        nextPageUrl = responseData.get("paging", {}).get("next")
+        if not nextPageUrl:
+            break
+
+        # The "next" URL already includes all needed query params (including
+        # the access token), so switch to using it directly with no extra params.
+        requestUrl = nextPageUrl
+        requestParams = None
+
+    return collectedItems[:postCount]
 
 
 def pullMediaWithinLastNDays(accessToken, userId, days):
