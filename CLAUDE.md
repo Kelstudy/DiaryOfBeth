@@ -120,7 +120,8 @@ There is no test suite, linter, or build step configured.
   `pulledSetSummary` / `recentWindow` / `last30Days` is present, so old-schema entries still render),
   then renders a masthead (latest username/account type/following/media count) plus a
   filter-driven dashboard body — see Filters below.
-- Two filter `<select>`s (`#rangeSelect`: 7/30/90 days or all time; `#topNSelect`: 5/10/15/25/all posts)
+- Two filter `<select>`s (`#rangeSelect`: 7/30 days or all time — capped at 30 to match the workflow's
+  default pull window, see Storage & automation; `#topNSelect`: 5/10/15/25/all posts)
   sit above the KPI row and drive `renderDashboard()` on `change`. **Scoping rules** (deliberately
   different per element, since some KPIs are point-in-time and can't be "filtered"):
   - **Time range** filters which *history snapshots* feed the two line charts, and which of the
