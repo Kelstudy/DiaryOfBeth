@@ -123,8 +123,14 @@ There is no test suite, linter, or build step configured.
   dependency — everything is hand-written vanilla JS/CSS, self-contained.
 - `dashboard.js` fetches the full history, normalizes each entry (`getSummary()` reads whichever of
   `pulledSetSummary` / `recentWindow` / `last30Days` is present, so old-schema entries still render),
-  then renders a masthead (latest username/account type/following/media count) plus a
-  filter-driven dashboard body — see Filters below.
+  then renders a masthead (avatar photo, username, `formatAccountType()`-title-cased account type,
+  following/posts/followers counts) plus a filter-driven dashboard body — see Filters below.
+- The masthead avatar is a static file at `assets/profile.jpg` (not pulled from the API — Instagram's
+  Graph API doesn't expose a fetchable profile picture URL for this product), referenced directly in
+  `index.html`. Replace that file to change the photo; no code change needed.
+- An explainer card (`.explainer` in `index.html`, right below the masthead) gives first-time visitors
+  — brand collaborators, not repo maintainers — a plain-language one-paragraph summary of what the page
+  shows and what "engagement rate" means. Static content, not data-driven.
 - Two filter `<select>`s (`#rangeSelect`: 7/30 days or all time — capped at 30 to match the workflow's
   default pull window, see Storage & automation; `#topNSelect`: 5/10/15/25/all posts)
   sit above the KPI row and drive `renderDashboard()` on `change`. **Scoping rules** (deliberately

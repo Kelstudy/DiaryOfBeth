@@ -18,6 +18,16 @@
     return Math.round(value).toLocaleString("en-US");
   }
 
+  // Instagram returns account_type as a raw enum (e.g. "MEDIA_CREATOR") -
+  // title-case it for display rather than showing the API's shouting-case form.
+  function formatAccountType(accountType) {
+    return accountType
+      .toLowerCase()
+      .split("_")
+      .map(function (word) { return word.charAt(0).toUpperCase() + word.slice(1); })
+      .join(" ");
+  }
+
   function formatPercent(value) {
     if (value === null || value === undefined || isNaN(value)) return "—";
     return value.toFixed(2) + "%";
@@ -240,9 +250,10 @@
     }
 
     var metaParts = [];
-    if (profile.accountType) metaParts.push(profile.accountType);
+    if (profile.accountType) metaParts.push(formatAccountType(profile.accountType));
     if (profile.followingCount != null) metaParts.push(formatFullNumber(profile.followingCount) + " following");
     if (profile.mediaCount != null) metaParts.push(formatFullNumber(profile.mediaCount) + " posts");
+    if (profile.followersCount != null) metaParts.push(formatFullNumber(profile.followersCount) + " followers");
     document.getElementById("accountMeta").textContent = metaParts.join(" · ");
 
     document.getElementById("asOf").textContent = "Last pulled " + formatDateFull(latest.pulledAt);
