@@ -25,9 +25,11 @@ INSTAGRAM_REDIRECT_URI=https://localhost/
 - `python getAccessToken.py` — one-time (or re-auth) interactive flow: builds an authorization URL,
   takes a pasted redirect URL back, and exchanges it for a long-lived (~60 day) token saved to
   `token.json` (gitignored). Run this first, and again whenever the token has fully expired.
-- `python pullData.py` — the real collector. Builds one JSON snapshot and appends it to
-  `data/statsHistory.json`, skipping the save if nothing changed since the last run. Intended to run
-  on a schedule (a GitHub Actions cron job is planned but not yet present in this repo).
+- `python pullData.py` — the real collector. Prompts for how many days of posts to summarize and how
+  many recent posts to pull in full detail (Enter accepts the defaults: 30 days, 10 posts), then
+  builds one JSON snapshot and appends it to `data/statsHistory.json`, skipping the save if nothing
+  changed since the last run. Interactive prompts mean this isn't yet cron-friendly as-is — that'll
+  need addressing when GitHub Actions automation is set up (e.g. env var / CLI arg overrides).
 
 There is no test suite, linter, or build step configured.
 
@@ -50,10 +52,12 @@ There is no test suite, linter, or build step configured.
    Access — single-user, own-account-only, no Meta App Review needed.
 2. **`igApi.py`** — owns all the Instagram Graph API pull logic, imported by `pullData.py`:
    - `loadToken()` reads `token.json`.
-   - `pullProfile`, `pullRecentMedia`, `pullMediaWithinLast30Days`, `pullMediaInsights`,
-     `pullAccountReachLast30Days` — the API calls.
-   - `pullMediaWithinLast30Days` paginates through `paging.next` URLs until it hits a post older than
-     30 days (posts come back newest-first), so the 30-day set is exact, not capped by page size.
+   - `pullProfile`, `pullRecentMedia`, `pullMediaWithinLastNDays`, `pullMediaInsights`,
+     `pullAccountReachLastNDays` — the API calls. The day-window ones take a `days` argument rather
+     than a hardcoded 30.
+   - `pullMediaWithinLastNDays` paginates through `paging.next` URLs until it hits a post older than
+     the requested window (posts come back newest-first), so the post set is exact, not capped by
+     page size.
    - `getMetricListForProductType` — Reels support `reach`, `views`, `saved`, `shares`,
      `total_interactions` but **not** `impressions`; photos/carousels are expected to use
      `impressions` instead of `views` (confirmed live for Reels; not yet confirmed live for
@@ -65,10 +69,17 @@ There is no test suite, linter, or build step configured.
    - Note: `total_interactions` is the correct current metric name — `engagement` is not a valid
      field.
 3. **`pullData.py`** — imports the pull functions from `igApi.py` and assembles them into a snapshot:
-   - `buildSnapshot` orchestrates one full pull (profile, recent posts + their insights, 30-day post
-     set + insights, account-level 30-day reach) into one dict tagged with `pulledAt`.
-   - `buildPostRecord` / `buildLast30DaysSummary` shape the raw API responses into the stored record
-     format.
+   - `main()` prompts for `windowDays` (default `DEFAULT_WINDOW_DAYS` = 30) and `detailedPostCount`
+     (default `DETAILED_POST_COUNT` = 10) via `promptForPositiveInt`, then passes both into
+     `buildSnapshot`.
+   - `buildSnapshot` orchestrates one full pull (profile, `detailedPostCount` recent posts + their
+     insights, the `windowDays`-day post set + insights, account-level reach over that same window)
+     into one dict tagged with `pulledAt`.
+   - `buildPostRecord` / `buildWindowSummary` shape the raw API responses into the stored record
+     format. The window summary is stored under the `recentWindow` key and includes `windowDays` so
+     historical entries stay self-describing even as the requested window changes run to run. (Older
+     entries predating this change use the key `last30Days` instead — the dedup check in
+     `isDuplicateOfLastSnapshot` treats these as distinct, which is correct since the schema differs.)
    - `loadExistingHistory` / `saveHistory` read and rewrite `data/statsHistory.json` as a JSON array
      (append-only, powers time-series charts on the eventual frontend).
    - `isDuplicateOfLastSnapshot` compares a freshly built snapshot to the last saved one (ignoring the

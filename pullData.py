@@ -5,12 +5,14 @@ The real, automated data-collection script. Uses the shared pull logic in
 igApi.py and packages everything into one JSON "snapshot" record, appended
 to a running history file (data/statsHistory.json).
 
-This is what the GitHub Actions cron job will run on a schedule. Each run
-adds one new entry to the history, which is what powers the growth charts
-and "top posts" gallery on the frontend later. If a run's snapshot is
+Each run adds one new entry to the history, which is what powers the growth
+charts and "top posts" gallery on the frontend later. If a run's snapshot is
 identical (aside from the timestamp) to the last saved one - e.g. the script
 was re-run with nothing new to report - it is skipped instead of appended,
 to keep the history free of no-op duplicates.
+
+On start, it prompts for how many days of posts to summarize and how many
+recent posts to pull in full detail (press Enter to accept the defaults).
 
 Run with:
   python pullData.py
@@ -25,13 +27,14 @@ from igApi import (
     pullProfile,
     pullRecentMedia,
     pullMediaInsights,
-    pullMediaWithinLast30Days,
-    pullAccountReachLast30Days,
+    pullMediaWithinLastNDays,
+    pullAccountReachLastNDays,
     calculateEngagementRate,
     DETAILED_POST_COUNT,
 )
 
 DATA_FILE_PATH = os.path.join("data", "statsHistory.json")
+DEFAULT_WINDOW_DAYS = 30
 
 
 def buildPostRecord(mediaItem, followersCount, insightValues):
@@ -49,8 +52,8 @@ def buildPostRecord(mediaItem, followersCount, insightValues):
     }
 
 
-def buildLast30DaysSummary(mediaItems, insightsByMediaId, followersCount):
-    """Aggregate totals across the last-30-days post set for storage."""
+def buildWindowSummary(mediaItems, insightsByMediaId, followersCount):
+    """Aggregate totals across the requested day-window post set for storage."""
     if not mediaItems:
         return {
             "postsCounted": 0,
@@ -86,7 +89,7 @@ def buildLast30DaysSummary(mediaItems, insightsByMediaId, followersCount):
     }
 
 
-def buildSnapshot(accessToken, userId):
+def buildSnapshot(accessToken, userId, windowDays, detailedPostCount):
     """Run all the pulls and assemble one complete snapshot record."""
     profileData = pullProfile(accessToken, userId)
     followersCount = profileData.get("followers_count", 0)
@@ -99,7 +102,7 @@ def buildSnapshot(accessToken, userId):
         "mediaCount": profileData.get("media_count"),
     }
 
-    recentMediaItems = pullRecentMedia(accessToken, userId, mediaLimit=DETAILED_POST_COUNT)
+    recentMediaItems = pullRecentMedia(accessToken, userId, mediaLimit=detailedPostCount)
 
     recentInsightsByMediaId = {}
     for mediaItem in recentMediaItems:
@@ -113,32 +116,33 @@ def buildSnapshot(accessToken, userId):
         for mediaItem in recentMediaItems
     ]
 
-    last30DaysMediaItems = pullMediaWithinLast30Days(accessToken, userId)
-    totalLast30DaysPosts = len(last30DaysMediaItems)
-    print(f"  Found {totalLast30DaysPosts} post(s) in the last 30 days - pulling insights for each...")
+    windowMediaItems = pullMediaWithinLastNDays(accessToken, userId, windowDays)
+    totalWindowPosts = len(windowMediaItems)
+    print(f"  Found {totalWindowPosts} post(s) in the last {windowDays} day(s) - pulling insights for each...")
 
-    last30DaysInsightsByMediaId = {}
-    for postIndex, mediaItem in enumerate(last30DaysMediaItems, start=1):
+    windowInsightsByMediaId = {}
+    for postIndex, mediaItem in enumerate(windowMediaItems, start=1):
         productType = mediaItem.get("media_product_type", "")
-        last30DaysInsightsByMediaId[mediaItem["id"]] = pullMediaInsights(
+        windowInsightsByMediaId[mediaItem["id"]] = pullMediaInsights(
             accessToken, mediaItem["id"], productType
         )
-        if postIndex % 10 == 0 or postIndex == totalLast30DaysPosts:
-            print(f"    ...{postIndex}/{totalLast30DaysPosts} insight pulls done")
+        if postIndex % 10 == 0 or postIndex == totalWindowPosts:
+            print(f"    ...{postIndex}/{totalWindowPosts} insight pulls done")
 
-    last30DaysSummary = buildLast30DaysSummary(
-        last30DaysMediaItems, last30DaysInsightsByMediaId, followersCount
+    windowSummary = buildWindowSummary(
+        windowMediaItems, windowInsightsByMediaId, followersCount
     )
+    windowSummary["windowDays"] = windowDays
 
-    totalAccountReach, reachError = pullAccountReachLast30Days(accessToken, userId)
-    last30DaysSummary["accountReachSummed"] = totalAccountReach
-    last30DaysSummary["accountReachError"] = reachError
+    totalAccountReach, reachError = pullAccountReachLastNDays(accessToken, userId, windowDays)
+    windowSummary["accountReachSummed"] = totalAccountReach
+    windowSummary["accountReachError"] = reachError
 
     return {
         "pulledAt": datetime.now(timezone.utc).isoformat(),
         "profile": profileRecord,
         "recentPosts": recentPostRecords,
-        "last30Days": last30DaysSummary,
+        "recentWindow": windowSummary,
     }
 
 
@@ -178,11 +182,38 @@ def isDuplicateOfLastSnapshot(newSnapshot, historyRecords):
     return comparableNew == comparableLast
 
 
+def promptForPositiveInt(promptText, defaultValue):
+    """Ask for a positive integer, falling back to defaultValue on blank/invalid input."""
+    rawInput = input(f"{promptText} [default {defaultValue}]: ").strip()
+
+    if not rawInput:
+        return defaultValue
+
+    try:
+        parsedValue = int(rawInput)
+    except ValueError:
+        print(f"  Not a whole number - using default of {defaultValue}.")
+        return defaultValue
+
+    if parsedValue <= 0:
+        print(f"  Must be positive - using default of {defaultValue}.")
+        return defaultValue
+
+    return parsedValue
+
+
 def main():
     accessToken, userId = loadToken()
 
+    windowDays = promptForPositiveInt(
+        "How many days of posts to summarize?", DEFAULT_WINDOW_DAYS
+    )
+    detailedPostCount = promptForPositiveInt(
+        "How many recent posts to pull in full detail?", DETAILED_POST_COUNT
+    )
+
     print("Pulling latest Instagram stats...")
-    newSnapshot = buildSnapshot(accessToken, userId)
+    newSnapshot = buildSnapshot(accessToken, userId, windowDays, detailedPostCount)
 
     historyRecords = loadExistingHistory(DATA_FILE_PATH)
 

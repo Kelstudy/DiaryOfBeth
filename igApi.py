@@ -18,10 +18,10 @@ BASE_URL = "https://graph.instagram.com"
 # How many of the most recent posts to pull in full detail.
 DETAILED_POST_COUNT = 10
 
-# Page size used while paginating through posts to build the 30-day overview.
+# Page size used while paginating through posts to build the N-day overview.
 # This does NOT cap how many posts get counted - pagination continues across
-# as many pages as needed until a post older than 30 days is reached.
-MONTHLY_SCAN_PAGE_SIZE = 25
+# as many pages as needed until a post older than the requested window is reached.
+SCAN_PAGE_SIZE = 25
 
 
 def loadToken(tokenPath="token.json"):
@@ -64,11 +64,11 @@ def pullRecentMedia(accessToken, userId, mediaLimit):
     return response.json().get("data", [])
 
 
-def pullMediaWithinLast30Days(accessToken, userId):
+def pullMediaWithinLastNDays(accessToken, userId, days):
     """
     Paginate through posts (newest first) and collect every post from the
-    last 30 days - not just the first page. Stops as soon as a post older
-    than 30 days is reached, since Instagram returns posts in reverse
+    last N days - not just the first page. Stops as soon as a post older
+    than the window is reached, since Instagram returns posts in reverse
     chronological order, so nothing beyond that point can still be in range.
 
     This means the number of posts returned is exact, not limited by a
@@ -82,7 +82,7 @@ def pullMediaWithinLast30Days(accessToken, userId):
     requestUrl = f"{BASE_URL}/{userId}/media"
     requestParams = {
         "fields": mediaFields,
-        "limit": MONTHLY_SCAN_PAGE_SIZE,
+        "limit": SCAN_PAGE_SIZE,
         "access_token": accessToken,
     }
 
@@ -97,7 +97,7 @@ def pullMediaWithinLast30Days(accessToken, userId):
 
         reachedOlderPost = False
         for mediaItem in responseData.get("data", []):
-            if isWithinLast30Days(mediaItem.get("timestamp", "")):
+            if isWithinLastNDays(mediaItem.get("timestamp", ""), days):
                 collectedItems.append(mediaItem)
             else:
                 reachedOlderPost = True
@@ -115,7 +115,7 @@ def pullMediaWithinLast30Days(accessToken, userId):
         requestUrl = nextPageUrl
         requestParams = None
 
-    print(f"  (scanned {pageCount} page(s) of posts to find everything in the last 30 days)")
+    print(f"  (scanned {pageCount} page(s) of posts to find everything in the last {days} day(s))")
     return collectedItems
 
 
@@ -173,9 +173,9 @@ def pullMediaInsights(accessToken, mediaId, productType):
     return insightValues
 
 
-def pullAccountReachLast30Days(accessToken, userId):
+def pullAccountReachLastNDays(accessToken, userId, days):
     """
-    Pull account-level daily reach for the last 30 days and sum it.
+    Pull account-level daily reach for the last N days and sum it.
 
     Note: summing daily "unique reach" values is an approximation - the same
     person reached on multiple days gets counted more than once. It's still
@@ -183,7 +183,7 @@ def pullAccountReachLast30Days(accessToken, userId):
     count. Flagging this rather than presenting it as more precise than it is.
     """
     untilTime = int(time.time())
-    sinceTime = untilTime - (30 * 24 * 60 * 60)
+    sinceTime = untilTime - (days * 24 * 60 * 60)
 
     response = requests.get(
         f"{BASE_URL}/{userId}/insights",
@@ -205,14 +205,14 @@ def pullAccountReachLast30Days(accessToken, userId):
     return totalReach, None
 
 
-def isWithinLast30Days(isoTimestamp):
-    """Check whether a post's timestamp falls within the last 30 days."""
+def isWithinLastNDays(isoTimestamp, days):
+    """Check whether a post's timestamp falls within the last N days."""
     try:
         postDate = datetime.fromisoformat(isoTimestamp)
     except (ValueError, TypeError):
         return False
 
-    cutoffDate = datetime.now(timezone.utc) - timedelta(days=30)
+    cutoffDate = datetime.now(timezone.utc) - timedelta(days=days)
     return postDate >= cutoffDate
 
 
