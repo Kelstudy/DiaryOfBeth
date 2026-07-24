@@ -1,2 +1,4 @@
+# Dependencies for the scripts in scripts/ (the frontend has none - plain
+# HTML/CSS/JS, no build step).
 requests
 python-dotenv

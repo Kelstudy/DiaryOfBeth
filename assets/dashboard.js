@@ -1,3 +1,11 @@
+/*
+ * dashboard.js - fetches data/statsHistory.json and renders the entire
+ * media-kit dashboard client-side: masthead, Overview tab (filterable KPI
+ * tiles, follower/engagement trend charts, top posts) and Audience tab
+ * (follower demographics). No build step, no framework, no dependencies -
+ * plain DOM/SVG. See CLAUDE.md's Frontend section for how the pieces fit
+ * together.
+ */
 (function () {
   "use strict";
 

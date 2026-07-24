@@ -1,3 +1,6 @@
+# Daily automation: refresh the Instagram access token, pull the latest
+# stats, and commit them to data/statsHistory.json if anything changed.
+# See scripts/pullData.py and scripts/refreshToken.py for the actual logic.
 name: Pull Instagram Stats
 
 on:
@@ -42,7 +45,7 @@ jobs:
           INSTAGRAM_TOKEN_JSON: ${{ secrets.INSTAGRAM_TOKEN_JSON }}
 
       - name: Refresh access token
-        run: python refreshToken.py
+        run: python scripts/refreshToken.py
 
       - name: Save refreshed token back to the repo secret
         run: gh secret set INSTAGRAM_TOKEN_JSON < token.json
@@ -51,7 +54,7 @@ jobs:
 
       - name: Pull stats
         run: >
-          python pullData.py
+          python scripts/pullData.py
           --mode "${{ github.event.inputs.mode || 'days' }}"
           --value "${{ github.event.inputs.value || '30' }}"
 

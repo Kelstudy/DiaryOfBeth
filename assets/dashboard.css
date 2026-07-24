@@ -1,3 +1,9 @@
+/*
+ * dashboard.css - all styling for index.html's media-kit dashboard.
+ * Dark-only, hand-written, no framework. Color roles are defined once as
+ * custom properties below and referenced by name throughout.
+ */
+
 :root {
   color-scheme: dark;
   --page-plane:     #0d0d0d;

@@ -3,9 +3,9 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Purpose
-Automated pipeline that pulls live Instagram stats for the account `thediaryofbeth` and (eventually)
-displays them on a public dashboard used as a media kit when negotiating paid brand collabs. Goal: a
-self-updating, shareable page — no manual stat pulling ever again.
+Automated pipeline that pulls live Instagram stats for the account `thediaryofbeth` and displays them
+on a public dashboard (`https://kelstudy.github.io/DiaryOfBeth/`) used as a media kit when negotiating
+paid brand collabs. A self-updating, shareable page — no manual stat pulling ever again.
 
 ## Setup
 
@@ -22,22 +22,25 @@ INSTAGRAM_REDIRECT_URI=https://localhost/
 
 ## Commands
 
-- `python getAccessToken.py` — one-time (or re-auth) interactive flow: builds an authorization URL,
-  takes a pasted redirect URL back, and exchanges it for a long-lived (~60 day) token saved to
-  `token.json` (gitignored). Run this first, and again whenever the token has fully expired.
-- `python pullData.py` — the real collector. Prompts for exactly one pull mode: every post from the
-  last N days, exactly N most recent posts, or every post since a given date (midnight UTC on that
+All Python scripts live in `scripts/` and are run from the repo root (they use paths relative to the
+working directory, e.g. `data/statsHistory.json` and `token.json`, not to the script's own location).
+
+- `python scripts/getAccessToken.py` — one-time (or re-auth) interactive flow: builds an authorization
+  URL, takes a pasted redirect URL back, and exchanges it for a long-lived (~60 day) token saved to
+  `token.json` (gitignored, repo root). Run this first, and again whenever the token has fully expired.
+- `python scripts/pullData.py` — the real collector. Prompts for exactly one pull mode: every post from
+  the last N days, exactly N most recent posts, or every post since a given date (midnight UTC on that
   date onward) — never combined, so requesting "30 days" can't silently get capped at "10 posts".
   Enter accepts the day/post-count defaults (30 days / 10 posts); the date mode always requires
   explicit input. Then builds one JSON snapshot and appends it to `data/statsHistory.json`, skipping
   the save if nothing changed since the last run.
-- `python pullData.py --mode {days,posts,date} --value VALUE` — same collector, non-interactive.
+- `python scripts/pullData.py --mode {days,posts,date} --value VALUE` — same collector, non-interactive.
   Skips the prompts entirely; used by the GitHub Actions workflow. `--mode` and `--value` must be
-  given together. Example: `python pullData.py --mode days --value 30`.
-- `python refreshToken.py` — non-interactive. Exchanges the current long-lived token in `token.json`
-  for a fresh one with a new ~60-day expiry (no browser login needed, unlike `getAccessToken.py`).
-  Instagram only allows this once the token is at least 24h old and still unexpired. Run automatically
-  by the GitHub Actions workflow before every scheduled pull.
+  given together. Example: `python scripts/pullData.py --mode days --value 30`.
+- `python scripts/refreshToken.py` — non-interactive. Exchanges the current long-lived token in
+  `token.json` for a fresh one with a new ~60-day expiry (no browser login needed, unlike
+  `getAccessToken.py`). Instagram only allows this once the token is at least 24h old and still
+  unexpired. Run automatically by the GitHub Actions workflow before every scheduled pull.
 
 There is no test suite, linter, or build step configured.
 
@@ -54,9 +57,11 @@ There is no test suite, linter, or build step configured.
 
 ## Architecture
 
-1. **`getAccessToken.py`** — auth only. Produces `token.json` (`accessToken`, `userId`, `obtainedAt`,
-   `expiresAt`). Not imported by the other scripts. Instagram API with Instagram Login, Standard
-   Access — single-user, own-account-only, no Meta App Review needed.
+All paths below are relative to `scripts/` unless stated otherwise.
+
+1. **`getAccessToken.py`** — auth only. Produces `token.json` (repo root; `accessToken`, `userId`,
+   `obtainedAt`, `expiresAt`). Not imported by the other scripts. Instagram API with Instagram Login,
+   Standard Access — single-user, own-account-only, no Meta App Review needed.
 2. **`refreshToken.py`** — standalone, not imported by other scripts. Calls
    `https://graph.instagram.com/refresh_access_token` with the current token to get a new one with a
    fresh ~60-day expiry, overwriting `token.json` in place (keeps the same `userId`). On failure
@@ -183,8 +188,8 @@ There is no test suite, linter, or build step configured.
 - Dark-only (no light-mode toggle) — deliberate, per the dark-themed aesthetic above, not an
   oversight. Colors are the dataviz skill's default validated palette (dark column): series blue
   `#3987e5`, good/bad deltas `#0ca30c`/`#e66767`, chart surface `#1a1a19` on page plane `#0d0d0d`.
-- **GitHub Pages must be enabled manually** in repo Settings → Pages → Source: Deploy from branch →
-  `main` / `(root)`. Not yet done as of this writing — needed before the site is actually reachable.
+- Live at `https://kelstudy.github.io/DiaryOfBeth/` via GitHub Pages (Settings → Pages → Deploy from
+  branch → `main` / `(root)`).
 
 ## Storage & automation
 
@@ -197,8 +202,9 @@ There is no test suite, linter, or build step configured.
   This makes the token effectively self-sustaining: it gets refreshed to a fresh ~60-day expiry every
   single day, so it never has a chance to actually expire as long as the workflow keeps running.
   - **Requires a repo secret named `INSTAGRAM_TOKEN_JSON`** containing the exact contents of a valid
-    `token.json`. Written out on the runner before calling `refreshToken.py`/`pullData.py`; nothing
-    token-related ever gets committed (`git add` in the workflow only stages `data/statsHistory.json`).
+    `token.json`. Written out on the runner before calling `scripts/refreshToken.py`/`scripts/pullData.py`;
+    nothing token-related ever gets committed (`git add` in the workflow only stages
+    `data/statsHistory.json`).
   - **Requires a second repo secret named `GH_PAT`** — a GitHub Personal Access Token with permission
     to write Actions secrets on this repo, used by the `gh secret set` step to persist the refreshed
     token back into `INSTAGRAM_TOKEN_JSON`. This is the one piece of setup that can't be automated away
@@ -206,19 +212,18 @@ There is no test suite, linter, or build step configured.
     ongoing one.
   - If both secrets are set correctly and the daily cron keeps running, no manual token maintenance
     should ever be needed again. If the workflow ever stops running for longer than the refresh window
-    (~60 days) — repo archived, Actions disabled, etc. — the token will lapse and `getAccessToken.py`
-    will need to be run by hand to re-establish it from scratch.
+    (~60 days) — repo archived, Actions disabled, etc. — the token will lapse and
+    `scripts/getAccessToken.py` will need to be run by hand to re-establish it from scratch.
 
 ## Open items / known gaps
 
-- GitHub Pages isn't enabled yet (see Frontend section above) — the site exists in the repo but isn't
-  live until that's turned on in repo settings.
 - **Security**: an earlier access token was exposed in a chat session and has since been rotated via
-  `getAccessToken.py`.
+  `scripts/getAccessToken.py`.
 - Trial reels (Instagram creates several distinct REELS media IDs per trial reel upload, seconds
   apart) show up as separate posts in pulls, inflating post counts and stats. A timing-based filter
   (collapsing REELS posted within 60s of each other) was tried and reverted — it risked dropping
   legitimate posts made in quick succession, since no API field reliably distinguishes trial reels
-  from real ones (`is_shared_to_feed` was tested and ruled out). `inspectMedia.py` remains in the repo
+  from real ones (`is_shared_to_feed` was tested and ruled out). `scripts/inspectMedia.py` remains in
+  the repo
   as a diagnostic. Planned approach instead: tag trial-reel captions manually going forward and filter
   on that tag, once there's a labeled example to build against.
