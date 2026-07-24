@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@thediaryofbeth — Media Kit</title>
+<meta name="description" content="Live Instagram growth &amp; engagement stats for @thediaryofbeth.">
+<link rel="stylesheet" href="assets/dashboard.css">
+</head>
+<body>
+  <div class="page">
+
+    <header class="masthead">
+      <div class="masthead-identity">
+        <div class="avatar-ring" aria-hidden="true"></div>
+        <div>
+          <h1 id="username">@thediaryofbeth</h1>
+          <p class="subtitle" id="accountMeta">Loading live stats…</p>
+        </div>
+      </div>
+      <a id="profileLink" class="btn-outline" href="https://instagram.com/thediaryofbeth" target="_blank" rel="noopener">
+        View on Instagram
+      </a>
+    </header>
+
+    <p class="asof" id="asOf"></p>
+
+    <section class="kpi-row" id="kpiRow" aria-label="Key stats"></section>
+
+    <section class="chart-grid">
+      <div class="card">
+        <div class="card-head">
+          <h2>Follower growth</h2>
+          <p class="card-sub">Followers at time of each pull</p>
+        </div>
+        <div class="chart-wrap" id="followerChart"></div>
+        <p class="chart-empty" id="followerChartEmpty" hidden>Not enough history yet — check back after a few more pulls.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Engagement rate</h2>
+          <p class="card-sub">Average across each pulled post set</p>
+        </div>
+        <div class="chart-wrap" id="engagementChart"></div>
+        <p class="chart-empty" id="engagementChartEmpty" hidden>Not enough history yet — check back after a few more pulls.</p>
+      </div>
+    </section>
+
+    <section class="card posts-card">
+      <div class="card-head">
+        <h2>Top posts</h2>
+        <p class="card-sub" id="postsSub">By engagement rate, from the most recent pull</p>
+      </div>
+      <div class="posts-grid" id="postsGrid"></div>
+    </section>
+
+    <footer class="page-footer">
+      <p>Data pulled automatically from the Instagram Graph API. Source: <a href="https://github.com/Kelstudy/DiaryOfBeth" target="_blank" rel="noopener">DiaryOfBeth on GitHub</a>.</p>
+    </footer>
+
+  </div>
+
+  <script src="assets/dashboard.js"></script>
+</body>
+</html>

@@ -49,9 +49,8 @@ There is no test suite, linter, or build step configured.
 - Prefer explicit, readable code over clever one-liners.
 - No code duplication — new scripts import shared logic rather than re-implementing it (see
   `igApi.py` below).
-- Frontend (not yet built): plain HTML/CSS/JS or a lightweight framework. No paid services anywhere
-  in the stack — everything must stay free to host. Dark-themed, data-report aesthetic, visually
-  consistent with an existing portfolio site also hosted on GitHub Pages.
+- Frontend: plain HTML/CSS/JS, no build step, no framework. No paid services anywhere in the stack —
+  everything must stay free to host. Dark-themed, data-report aesthetic.
 
 ## Architecture
 
@@ -110,6 +109,29 @@ There is no test suite, linter, or build step configured.
      `pulledAt` timestamp); if nothing changed, `main()` skips the save instead of appending a no-op
      duplicate entry. A real change in followers, likes, or insights always gets saved.
 
+## Frontend
+
+- **`index.html`** (repo root — required so GitHub Pages can serve both the page and
+  `data/statsHistory.json` from the same origin via a relative `fetch("data/statsHistory.json")`;
+  moving the page into a subfolder would break that fetch unless the data were duplicated into it) +
+  **`assets/dashboard.css`** + **`assets/dashboard.js`**. No build step, no framework, no CDN
+  dependency — everything is hand-written vanilla JS/CSS, self-contained.
+- `dashboard.js` fetches the full history, normalizes each entry (`getSummary()` reads whichever of
+  `pulledSetSummary` / `recentWindow` / `last30Days` is present, so old-schema entries still render),
+  then renders: a masthead (latest username/account type/following/media count), a 4-tile KPI row
+  (followers, engagement rate, total interactions, account reach — each with a delta vs. the previous
+  snapshot), two hand-rolled SVG line charts (follower growth, engagement rate over time — with a
+  hover crosshair + tooltip, and a direct end-label on the latest point, clamped so it can never
+  render above the chart card), and a top-posts grid (latest snapshot's posts, sorted by
+  `engagementRate` descending, top 6, linking out to the real permalink).
+- Charts render an empty-state message instead of a broken chart when there are fewer than 2 history
+  points (true for a freshly-started history) — `renderLineChart` checks `points.length < 2` first.
+- Dark-only (no light-mode toggle) — deliberate, per the dark-themed aesthetic above, not an
+  oversight. Colors are the dataviz skill's default validated palette (dark column): series blue
+  `#3987e5`, good/bad deltas `#0ca30c`/`#e66767`, chart surface `#1a1a19` on page plane `#0d0d0d`.
+- **GitHub Pages must be enabled manually** in repo Settings → Pages → Source: Deploy from branch →
+  `main` / `(root)`. Not yet done as of this writing — needed before the site is actually reachable.
+
 ## Storage & automation
 
 - No database. Pulled data appends as timestamped snapshots to `data/statsHistory.json`.
@@ -135,8 +157,8 @@ There is no test suite, linter, or build step configured.
 
 ## Open items / known gaps
 
-- Frontend dashboard (GitHub Pages, follower growth chart, engagement trend, top posts gallery) does
-  not exist yet.
+- GitHub Pages isn't enabled yet (see Frontend section above) — the site exists in the repo but isn't
+  live until that's turned on in repo settings.
 - **Security**: an earlier access token was exposed in a chat session and has since been rotated via
   `getAccessToken.py`.
 - Trial reels (Instagram creates several distinct REELS media IDs per trial reel upload, seconds
