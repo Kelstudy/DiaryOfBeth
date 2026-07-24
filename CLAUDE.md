@@ -165,9 +165,10 @@ All paths below are relative to `scripts/` unless stated otherwise.
     `renderFixedKpiRow()` and never changes with the filter — these are point-in-time/fixed-window API
     values a client-side date filter can't meaningfully reslice. It sits directly under the masthead,
     with no filter control anywhere near it.
-  - The `#rangeSelect` (`Time range`: 7/30 days or all time — capped at 30 to match the workflow's
-    default pull window, see Storage & automation) lives in a `.section-heading` labeled "Performance
-    trends", positioned immediately above the one block of content it actually scopes:
+  - The `#rangeSelect` (`Time range`: 1/5/7/30 days — no "all time" option, since it would just show
+    the same 30 days every time; capped at 30 to match the workflow's default pull window, see Storage
+    & automation) lives in a `.section-heading` labeled "Performance trends", positioned immediately
+    above the one block of content it actually scopes:
     `#kpiRowFiltered` (Engagement rate, Total interactions, via `renderFilteredKpiRow()`) and both trend
     charts. It filters which *history snapshots* feed the charts, and which of the latest snapshot's own
     posts (by each post's own `timestamp`) feed the filtered KPI tiles and the top-posts grid. It can

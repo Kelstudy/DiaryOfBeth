@@ -122,12 +122,12 @@
 
   // ---------- range filtering ----------
 
-  // "all" or a number of days. Filters snapshots by pulledAt, and posts by
-  // their own timestamp - both bounded by whatever was actually collected
-  // at pull time, so a range wider than the last pull's own window can't
-  // surface posts that were never fetched.
+  // A number of days. Filters snapshots by pulledAt, and posts by their own
+  // timestamp - both bounded by whatever was actually collected at pull
+  // time, so a range wider than the last pull's own window (30 days, see
+  // the workflow's default --value) can't surface posts that were never
+  // fetched. There's no "all time" option for that reason.
   function cutoffDateForRange(rangeValue) {
-    if (rangeValue === "all") return null;
     var days = parseInt(rangeValue, 10);
     var cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
@@ -519,7 +519,7 @@
   // N by engagement - those two can legitimately differ, since a post from
   // today might just not be a top performer yet.
   function formatRangeWindowLabel(rangeValue) {
-    if (rangeValue === "all") return "across all pulled posts";
+    if (rangeValue === "1") return "in the last day";
     return "in the last " + rangeValue + " days";
   }
 
