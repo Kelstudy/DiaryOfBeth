@@ -54,6 +54,14 @@ There is no test suite, linter, or build step configured.
      `pullAccountReachLast30Days` — the API calls.
    - `pullMediaWithinLast30Days` paginates through `paging.next` URLs until it hits a post older than
      30 days (posts come back newest-first), so the 30-day set is exact, not capped by page size.
+   - `collapseTrialReelClusters` filters out trial-reel duplicates: Instagram creates several distinct
+     REELS media IDs per trial reel upload, each with its own real (but partial) engagement, published
+     within seconds of each other. Confirmed live via `inspectMedia.py` — no API field (including
+     `is_shared_to_feed`, which was tested and ruled out: it varies independently and doesn't
+     correlate with clustering) reliably flags them. The working heuristic is timing: REELS posts
+     within `TRIAL_REEL_CLUSTER_SECONDS` (60s) of each other are collapsed to the single
+     highest-`like_count` variant. Applied inside `pullRecentMedia` and `pullMediaWithinLast30Days`,
+     so both feed real (non-inflated) post data to `pullData.py` automatically.
    - `getMetricListForProductType` — Reels support `reach`, `views`, `saved`, `shares`,
      `total_interactions` but **not** `impressions`; photos/carousels are expected to use
      `impressions` instead of `views` (confirmed live for Reels; not yet confirmed live for
@@ -87,8 +95,5 @@ There is no test suite, linter, or build step configured.
 - Frontend dashboard (GitHub Pages, follower growth chart, engagement trend, top posts gallery) does
   not exist yet.
 - GitHub Actions scheduled workflow not yet set up.
-- Trial reels have reportedly shown up in the `/media` API response despite being Instagram-internal;
-  no filtering logic exists yet for distinguishing and excluding them.
-- **Security**: a long-lived access token was reportedly exposed in a chat session in the past and may
-  need rotation (via `getAccessToken.py`) before this goes live publicly — verify current `token.json`
-  is not derived from that exposure before shipping anything public-facing.
+- **Security**: an earlier access token was exposed in a chat session and has since been rotated via
+  `getAccessToken.py`.
