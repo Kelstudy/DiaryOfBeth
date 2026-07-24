@@ -34,6 +34,10 @@ INSTAGRAM_REDIRECT_URI=https://localhost/
 - `python pullData.py --mode {days,posts,date} --value VALUE` — same collector, non-interactive.
   Skips the prompts entirely; used by the GitHub Actions workflow. `--mode` and `--value` must be
   given together. Example: `python pullData.py --mode days --value 30`.
+- `python refreshToken.py` — non-interactive. Exchanges the current long-lived token in `token.json`
+  for a fresh one with a new ~60-day expiry (no browser login needed, unlike `getAccessToken.py`).
+  Instagram only allows this once the token is at least 24h old and still unexpired. Run automatically
+  by the GitHub Actions workflow before every scheduled pull.
 
 There is no test suite, linter, or build step configured.
 
@@ -54,7 +58,12 @@ There is no test suite, linter, or build step configured.
 1. **`getAccessToken.py`** — auth only. Produces `token.json` (`accessToken`, `userId`, `obtainedAt`,
    `expiresAt`). Not imported by the other scripts. Instagram API with Instagram Login, Standard
    Access — single-user, own-account-only, no Meta App Review needed.
-2. **`igApi.py`** — owns all the Instagram Graph API pull logic, imported by `pullData.py`:
+2. **`refreshToken.py`** — standalone, not imported by other scripts. Calls
+   `https://graph.instagram.com/refresh_access_token` with the current token to get a new one with a
+   fresh ~60-day expiry, overwriting `token.json` in place (keeps the same `userId`). On failure
+   (network error, token past its refresh window), it leaves `token.json` untouched and exits cleanly
+   rather than raising — a refresh hiccup shouldn't abort the workflow's actual data pull.
+3. **`igApi.py`** — owns all the Instagram Graph API pull logic, imported by `pullData.py`:
    - `loadToken()` reads `token.json`.
    - `pullProfile`, `pullMostRecentPosts`, `pullMediaSinceDate`, `pullMediaWithinLastNDays`,
      `pullMediaInsights`, `pullAccountReachLastNDays` — the API calls.
@@ -75,7 +84,7 @@ There is no test suite, linter, or build step configured.
    - `calculateEngagementRate` = (likes + comments) / followers, as a percentage.
    - Note: `total_interactions` is the correct current metric name — `engagement` is not a valid
      field.
-3. **`pullData.py`** — imports the pull functions from `igApi.py` and assembles them into a snapshot:
+4. **`pullData.py`** — imports the pull functions from `igApi.py` and assembles them into a snapshot:
    - `promptForPullMode()` asks the user to choose exactly one of `"days"`, `"posts"`, or `"date"` mode
      and a value (`pullValue` is an int for `"days"`/`"posts"`, a `"YYYY-MM-DD"` string for `"date"`),
      returning `(pullMode, pullValue)`. These feed into a single pulled post set — there's no separate
@@ -104,26 +113,30 @@ There is no test suite, linter, or build step configured.
 ## Storage & automation
 
 - No database. Pulled data appends as timestamped snapshots to `data/statsHistory.json`.
-- `.github/workflows/pull-stats.yml` runs `pullData.py` on a daily cron (07:00 UTC) — daily, not more
-  frequent, given the API call volume of a full N-day pull (one insights call per post), to stay
-  within rate limits. Also runnable manually via `workflow_dispatch` with `mode`/`value` inputs
-  (defaults: `days` / `30`).
+- `.github/workflows/pull-stats.yml` runs on a daily cron (07:00 UTC) — daily, not more frequent, given
+  the API call volume of a full N-day pull (one insights call per post), to stay within rate limits.
+  Also runnable manually via `workflow_dispatch` with `mode`/`value` inputs (defaults: `days` / `30`).
+  Each run: writes `token.json` from a secret → refreshes it → writes the refreshed token back to that
+  same secret → pulls stats with the refreshed token → commits `data/statsHistory.json` if it changed.
+  This makes the token effectively self-sustaining: it gets refreshed to a fresh ~60-day expiry every
+  single day, so it never has a chance to actually expire as long as the workflow keeps running.
   - **Requires a repo secret named `INSTAGRAM_TOKEN_JSON`** containing the exact contents of a valid
-    `token.json` (i.e. the file `getAccessToken.py` produces). The workflow writes that secret out to
-    `token.json` on the runner before calling `pullData.py`; nothing token-related ever gets committed
-    (`git add` in the workflow only stages `data/statsHistory.json`).
-  - Because the long-lived token expires after ~60 days and there's no refresh script in this repo yet
-    (see `getAccessToken.py`'s docstring re: a not-yet-present `refreshToken.py`), the secret needs
-    manual re-rotation periodically — re-run `getAccessToken.py` locally and update the
-    `INSTAGRAM_TOKEN_JSON` secret before the current token expires, or the scheduled runs will start
-    failing.
+    `token.json`. Written out on the runner before calling `refreshToken.py`/`pullData.py`; nothing
+    token-related ever gets committed (`git add` in the workflow only stages `data/statsHistory.json`).
+  - **Requires a second repo secret named `GH_PAT`** — a GitHub Personal Access Token with permission
+    to write Actions secrets on this repo, used by the `gh secret set` step to persist the refreshed
+    token back into `INSTAGRAM_TOKEN_JSON`. This is the one piece of setup that can't be automated away
+    (a workflow can't grant itself permission to modify repo secrets) — a one-time manual step, not an
+    ongoing one.
+  - If both secrets are set correctly and the daily cron keeps running, no manual token maintenance
+    should ever be needed again. If the workflow ever stops running for longer than the refresh window
+    (~60 days) — repo archived, Actions disabled, etc. — the token will lapse and `getAccessToken.py`
+    will need to be run by hand to re-establish it from scratch.
 
 ## Open items / known gaps
 
 - Frontend dashboard (GitHub Pages, follower growth chart, engagement trend, top posts gallery) does
   not exist yet.
-- No token-refresh automation — the `INSTAGRAM_TOKEN_JSON` secret must be updated by hand every ~60
-  days (see Storage & automation above).
 - **Security**: an earlier access token was exposed in a chat session and has since been rotated via
   `getAccessToken.py`.
 - Trial reels (Instagram creates several distinct REELS media IDs per trial reel upload, seconds
