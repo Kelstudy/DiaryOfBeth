@@ -451,47 +451,36 @@ body {
 
 .tab-nav {
   display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  flex-wrap: wrap;
   margin-bottom: 24px;
 }
 
 .tab-btn {
-  position: relative;
   appearance: none;
-  background: none;
-  border: none;
+  background: var(--surface-1);
+  border: 2px solid var(--border);
+  border-radius: 12px;
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 10px 4px 12px;
-  margin-right: 20px;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 12px 22px;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
-.tab-btn::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  background: var(--brand-gradient);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.2s ease;
+.tab-btn:hover {
+  color: var(--text-primary);
+  border-color: #c94277;
+  transform: translateY(-1px);
 }
-
-.tab-btn:hover { color: var(--text-primary); }
 
 .tab-btn[aria-selected="true"] {
-  color: var(--text-primary);
-}
-
-.tab-btn[aria-selected="true"]::after {
-  transform: scaleX(1);
+  color: #ffffff;
+  border-color: transparent;
+  background: var(--brand-gradient);
+  box-shadow: 0 3px 10px rgba(201, 66, 119, 0.3);
 }
 
 /* Fade the panel in on activation - setupTabs() toggles this class

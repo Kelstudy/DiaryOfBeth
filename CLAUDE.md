@@ -239,6 +239,10 @@ All paths below are relative to `scripts/` unless stated otherwise.
 - Tab switches trigger a short fade/slide-in (`.tab-panel-enter`, re-triggered on every click via a
   remove-reflow-readd cycle in `setupTabs()`) rather than an instant `hidden` toggle — purely cosmetic
   polish, doesn't change what's shown.
+- Tab buttons (`.tab-btn`) are bordered pills, not an underline-only style — bigger hit target and more
+  visually obvious than a thin underline, per explicit feedback that the original underline tabs were
+  too easy to miss. The active tab fills solid with `--brand-gradient` and white text rather than just
+  changing an indicator line.
 - Live at `https://kelstudy.github.io/DiaryOfBeth/` via GitHub Pages (Settings → Pages → Deploy from
   branch → `main` / `(root)`).
 
