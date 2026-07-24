@@ -53,7 +53,9 @@ There is no test suite, linter, or build step configured.
 - No code duplication — new scripts import shared logic rather than re-implementing it (see
   `igApi.py` below).
 - Frontend: plain HTML/CSS/JS, no build step, no framework. No paid services anywhere in the stack —
-  everything must stay free to host. Dark-themed, data-report aesthetic.
+  everything must stay free to host. Light, pink-based brand aesthetic (page background pink, cards
+  off-white, text near-black) — modeled after a reference media-kit screenshot the account owner
+  supplied; changed from an earlier dark theme, see Frontend section below.
 
 ## Architecture
 
@@ -174,7 +176,13 @@ All paths below are relative to `scripts/` unless stated otherwise.
   — search `index.html` for that string to find them all.
 - The masthead avatar is a static file at `assets/profile.jpg` (not pulled from the API — Instagram's
   Graph API doesn't expose a fetchable profile picture URL for this product), referenced directly in
-  `index.html`. Replace that file to change the photo; no code change needed.
+  `index.html`. Replace that file to change the photo; no code change needed. It renders inside
+  `.avatar-ring` (padding trick: gradient background peeking out as a ring) rather than having a
+  gradient border directly, since `border` can't take a gradient value without `border-image` hacks.
+- Three surface tiers, not two: `--page-plane` (saturated pink, the body background), `--surface-1`
+  (off-white, top-level cards), `--surface-2` (pale pink, nested chips *inside* an off-white card —
+  post cards in the Top Posts grid, rate-card items in Collabs). Using page-plane pink again for those
+  nested chips would have made them blend into the page instead of reading as "inside" the card.
 - An explainer card (`.explainer` in `index.html`, right below the masthead) gives first-time visitors
   — brand collaborators, not repo maintainers — a short, plain-language read on what the page shows and
   what "engagement rate" means. Static content, not data-driven.
@@ -213,15 +221,21 @@ All paths below are relative to `scripts/` unless stated otherwise.
   permalink).
 - Charts render an empty-state message instead of a broken chart when there are fewer than 2 history
   points (true for a freshly-started history) — `renderLineChart` checks `points.length < 2` first.
-- Dark-only (no light-mode toggle) — deliberate, per the dark-themed aesthetic above, not an
-  oversight. Colors are the dataviz skill's default validated palette (dark column): series blue
-  `#3987e5`, good/bad deltas `#0ca30c`/`#e66767`, chart surface `#1a1a19` on page plane `#0d0d0d`.
-- **`--ig-gradient`** (a CSS var approximating Instagram's own brand gradient) is reserved for
-  decorative chrome only — the avatar ring, the primary CTA buttons (`.btn-gradient`), the tab
-  underline, the explainer card's accent border, post-type tags, and rate-card prices. It is never
-  used on anything that encodes data (chart marks, KPI values, rank-list bars all stay on the
-  validated dataviz palette above) — mixing a decorative rainbow gradient into data encoding would
-  break the "never a rainbow" categorical-color rule the dataviz skill enforces elsewhere on this page.
+- **Light-only, pink-based (no dark-mode toggle)** — deliberate, per the brand aesthetic above, not an
+  oversight. This replaced an earlier dark theme; the account owner supplied a reference media-kit
+  screenshot (pink background, off-white boxes, black text) and asked to match it. Chart/data colors
+  are the dataviz skill's validated **light-mode** palette (not a straight recolor of the old dark-mode
+  set — light backgrounds need different lightness/contrast): series blue `#2a78d6`, orange `#eb6834`,
+  aqua `#1baf7a`, good/bad deltas `#006300`/`#c0392b`, chart surface `#fdf6f3` on page plane `#f6c9d8`.
+- **`--brand-gradient`** (a CSS var approximating a pink/rose brand gradient, light pink → deep rose)
+  is reserved for decorative chrome only — the avatar ring, the primary CTA buttons (`.btn-gradient`),
+  the tab underline, and the explainer card's accent border. It is never used on anything that encodes
+  data (chart marks, KPI values, rank-list bars all stay on the validated dataviz palette above) —
+  mixing a decorative gradient into data encoding would break the "never a rainbow" categorical-color
+  rule the dataviz skill enforces elsewhere on this page. Post-type tags and rate-card prices use a
+  **separate**, more saturated two-stop gradient (`linear-gradient(90deg, #ec6a9c, #a83368)`) rather
+  than `--brand-gradient` directly — `--brand-gradient`'s pale starting stop reads too low-contrast as
+  small `background-clip: text`, which matters more for actual pricing text than for a large button.
 - Tab switches trigger a short fade/slide-in (`.tab-panel-enter`, re-triggered on every click via a
   remove-reflow-readd cycle in `setupTabs()`) rather than an instant `hidden` toggle — purely cosmetic
   polish, doesn't change what's shown.
