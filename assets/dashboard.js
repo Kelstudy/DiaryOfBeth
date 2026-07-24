@@ -62,6 +62,52 @@
       .sort(function (a, b) { return a.pulledAt - b.pulledAt; });
   }
 
+  // ---------- range filtering ----------
+
+  // "all" or a number of days. Filters snapshots by pulledAt, and posts by
+  // their own timestamp - both bounded by whatever was actually collected
+  // at pull time, so a range wider than the last pull's own window can't
+  // surface posts that were never fetched.
+  function cutoffDateForRange(rangeValue) {
+    if (rangeValue === "all") return null;
+    var days = parseInt(rangeValue, 10);
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    return cutoff;
+  }
+
+  function filterHistoryByRange(history, cutoff) {
+    if (!cutoff) return history;
+    return history.filter(function (entry) { return entry.pulledAt >= cutoff; });
+  }
+
+  function filterPostsByRange(posts, cutoff) {
+    if (!cutoff) return posts;
+    return posts.filter(function (post) {
+      var postDate = new Date(post.timestamp);
+      return !isNaN(postDate.getTime()) && postDate >= cutoff;
+    });
+  }
+
+  // Recompute aggregate stats from raw post records rather than trusting a
+  // snapshot's pre-computed pulledSetSummary, since that summary covers
+  // whatever the pull mode grabbed - not necessarily the range the viewer
+  // has selected here.
+  function computeAggregateFromPosts(posts) {
+    if (!posts.length) {
+      return { postsCounted: 0, averageEngagementRate: null, totalLikes: 0, totalComments: 0, totalInteractions: 0, combinedReach: 0 };
+    }
+    var sum = function (fn) { return posts.reduce(function (acc, p) { return acc + (fn(p) || 0); }, 0); };
+    return {
+      postsCounted: posts.length,
+      averageEngagementRate: sum(function (p) { return p.engagementRate; }) / posts.length,
+      totalLikes: sum(function (p) { return p.likeCount; }),
+      totalComments: sum(function (p) { return p.commentsCount; }),
+      totalInteractions: sum(function (p) { return p.insights && p.insights.total_interactions; }),
+      combinedReach: sum(function (p) { return p.insights && p.insights.reach; }),
+    };
+  }
+
   // ---------- KPI tiles ----------
 
   function renderDelta(container, current, previous, isUpGood, formatFn) {
@@ -100,17 +146,18 @@
     return tile;
   }
 
-  function renderKpiRow(history) {
+  function renderKpiRow(fullHistory, scopedPosts) {
     var container = document.getElementById("kpiRow");
-    if (!history.length) return;
+    container.innerHTML = "";
+    if (!fullHistory.length) return;
 
-    var latest = history[history.length - 1];
-    var previous = history.length > 1 ? history[history.length - 2] : null;
+    var latest = fullHistory[fullHistory.length - 1];
+    var previous = fullHistory.length > 1 ? fullHistory[fullHistory.length - 2] : null;
+    var aggregate = computeAggregateFromPosts(scopedPosts);
 
     var followers = latest.profile.followersCount;
-    var engagementRate = latest.summary.averageEngagementRate;
-    var totalInteractions = latest.summary.totalInteractions;
     var accountReach = latest.summary.accountReachSummed;
+    var accountReachWindowDays = latest.summary.accountReachWindowDays;
 
     container.appendChild(
       buildStatTile("Followers", formatFullNumber(followers), function (tile) {
@@ -119,19 +166,31 @@
     );
 
     container.appendChild(
-      buildStatTile("Engagement rate", formatPercent(engagementRate), function (tile) {
-        if (previous) renderDelta(tile, engagementRate, previous.summary.averageEngagementRate, true, formatPercent);
+      buildStatTile("Engagement rate", formatPercent(aggregate.averageEngagementRate), function (tile) {
+        var note = document.createElement("p");
+        note.className = "stat-delta flat";
+        note.textContent = "Across " + aggregate.postsCounted + " post" + (aggregate.postsCounted === 1 ? "" : "s") + " in range";
+        tile.appendChild(note);
       })
     );
 
     container.appendChild(
-      buildStatTile("Total interactions", formatCompactNumber(totalInteractions), function (tile) {
-        if (previous) renderDelta(tile, totalInteractions, previous.summary.totalInteractions, true, formatCompactNumber);
+      buildStatTile("Total interactions", formatCompactNumber(aggregate.totalInteractions), function (tile) {
+        var note = document.createElement("p");
+        note.className = "stat-delta flat";
+        note.textContent = "Across " + aggregate.postsCounted + " post" + (aggregate.postsCounted === 1 ? "" : "s") + " in range";
+        tile.appendChild(note);
       })
     );
 
     container.appendChild(
       buildStatTile("Account reach", accountReach === null || accountReach === undefined ? "—" : formatCompactNumber(accountReach), function (tile) {
+        var note = document.createElement("p");
+        note.className = "stat-delta flat";
+        note.textContent = accountReachWindowDays
+          ? "As pulled, last " + accountReachWindowDays + " day" + (accountReachWindowDays === 1 ? "" : "s")
+          : "As pulled";
+        tile.appendChild(note);
         if (previous && previous.summary.accountReachSummed != null) {
           renderDelta(tile, accountReach, previous.summary.accountReachSummed, true, formatCompactNumber);
         }
@@ -350,13 +409,22 @@
 
   // ---------- posts grid ----------
 
-  function renderPosts(history) {
+  function renderPosts(scopedPosts, topN, latestPulledAt) {
     var grid = document.getElementById("postsGrid");
-    if (!history.length) return;
-    var latest = history[history.length - 1];
-    var posts = latest.posts.slice().sort(function (a, b) {
+    grid.innerHTML = "";
+
+    var posts = scopedPosts.slice().sort(function (a, b) {
       return (b.engagementRate || 0) - (a.engagementRate || 0);
-    }).slice(0, 6);
+    }).slice(0, topN);
+
+    if (!posts.length) {
+      var empty = document.createElement("p");
+      empty.className = "chart-empty";
+      empty.textContent = "No posts in the selected range from the most recent pull.";
+      grid.appendChild(empty);
+      document.getElementById("postsSub").textContent = "By engagement rate";
+      return;
+    }
 
     posts.forEach(function (post) {
       var card = document.createElement("a");
@@ -396,7 +464,49 @@
     });
 
     document.getElementById("postsSub").textContent =
-      "By engagement rate, from the pull on " + formatDateShort(latest.pulledAt);
+      "By engagement rate, from the pull on " + formatDateShort(latestPulledAt);
+  }
+
+  // ---------- filter-driven render ----------
+
+  // Filters scope everything below them: the KPI row (re-aggregated from
+  // the latest pull's posts within range), both charts (snapshots within
+  // range), and the top-posts grid (posts within range, capped at topN).
+  // The masthead and the Followers/Account-reach KPI tiles stay anchored to
+  // the true latest pull regardless of range, since those are point-in-time
+  // values rather than something that gets "more" or "less" of with a
+  // wider window.
+  function renderDashboard(fullHistory, rangeValue, topN) {
+    if (!fullHistory.length) return;
+
+    var cutoff = cutoffDateForRange(rangeValue);
+    var chartHistory = filterHistoryByRange(fullHistory, cutoff);
+    var latest = fullHistory[fullHistory.length - 1];
+    var scopedPosts = filterPostsByRange(latest.posts, cutoff);
+
+    renderKpiRow(fullHistory, scopedPosts);
+    renderPosts(scopedPosts, topN, latest.pulledAt);
+
+    renderLineChart(
+      "followerChart", "followerChartEmpty",
+      chartHistory.map(function (e) { return { x: e.pulledAt, y: e.profile.followersCount }; }),
+      {
+        ariaLabel: "Follower growth over time",
+        yTickFormat: formatCompactNumber,
+        tooltipFormat: formatFullNumber,
+      }
+    );
+
+    renderLineChart(
+      "engagementChart", "engagementChartEmpty",
+      chartHistory.map(function (e) { return { x: e.pulledAt, y: e.summary.averageEngagementRate }; })
+        .filter(function (p) { return p.y !== null && p.y !== undefined; }),
+      {
+        ariaLabel: "Engagement rate over time",
+        yTickFormat: formatPercent,
+        tooltipFormat: formatPercent,
+      }
+    );
   }
 
   // ---------- boot ----------
@@ -409,29 +519,18 @@
     .then(function (rawHistory) {
       var history = normalizeHistory(rawHistory);
       renderMasthead(history);
-      renderKpiRow(history);
-      renderPosts(history);
 
-      renderLineChart(
-        "followerChart", "followerChartEmpty",
-        history.map(function (e) { return { x: e.pulledAt, y: e.profile.followersCount }; }),
-        {
-          ariaLabel: "Follower growth over time",
-          yTickFormat: formatCompactNumber,
-          tooltipFormat: formatFullNumber,
-        }
-      );
+      var rangeSelect = document.getElementById("rangeSelect");
+      var topNSelect = document.getElementById("topNSelect");
 
-      renderLineChart(
-        "engagementChart", "engagementChartEmpty",
-        history.map(function (e) { return { x: e.pulledAt, y: e.summary.averageEngagementRate }; })
-          .filter(function (p) { return p.y !== null && p.y !== undefined; }),
-        {
-          ariaLabel: "Engagement rate over time",
-          yTickFormat: formatPercent,
-          tooltipFormat: formatPercent,
-        }
-      );
+      function rerender() {
+        renderDashboard(history, rangeSelect.value, parseInt(topNSelect.value, 10));
+      }
+
+      rangeSelect.addEventListener("change", rerender);
+      topNSelect.addEventListener("change", rerender);
+
+      rerender();
     })
     .catch(function (err) {
       document.getElementById("accountMeta").textContent = "Couldn't load stats data.";
