@@ -28,6 +28,35 @@
       .join(" ");
   }
 
+  // ISO 3166-1 alpha-2 -> display name, for the follower-country breakdown.
+  // Not exhaustive - covers common codes with a fallback to the raw code
+  // for anything missing, rather than maintaining a full ~250-country list.
+  var COUNTRY_NAMES = {
+    US: "United States", GB: "United Kingdom", FR: "France", CA: "Canada",
+    DE: "Germany", AU: "Australia", IN: "India", IT: "Italy",
+    NL: "Netherlands", PL: "Poland", MX: "Mexico", ES: "Spain",
+    BR: "Brazil", IR: "Iran", SE: "Sweden", TR: "Turkey",
+    CH: "Switzerland", EG: "Egypt", BE: "Belgium", MA: "Morocco",
+    ID: "Indonesia", IE: "Ireland", PK: "Pakistan", NZ: "New Zealand",
+    FI: "Finland", AR: "Argentina", NG: "Nigeria", PT: "Portugal",
+    AT: "Austria", NO: "Norway", ZA: "South Africa", PH: "Philippines",
+    RO: "Romania", DK: "Denmark", CZ: "Czechia", IQ: "Iraq",
+    RU: "Russia", DZ: "Algeria", MY: "Malaysia", IL: "Israel",
+    SA: "Saudi Arabia", CL: "Chile", CO: "Colombia", AE: "United Arab Emirates",
+    GR: "Greece", JP: "Japan", KR: "South Korea", CN: "China",
+    SG: "Singapore", TH: "Thailand", VN: "Vietnam", HK: "Hong Kong",
+  };
+
+  function formatCountryName(countryCode) {
+    return COUNTRY_NAMES[countryCode] || countryCode;
+  }
+
+  function formatGenderLabel(genderCode) {
+    if (genderCode === "F") return "Female";
+    if (genderCode === "M") return "Male";
+    return "Not specified";
+  }
+
   function formatPercent(value) {
     if (value === null || value === undefined || isNaN(value)) return "—";
     return value.toFixed(2) + "%";
@@ -76,6 +105,7 @@
           profile: entry.profile || {},
           posts: entry.recentPosts || [],
           summary: summary,
+          audienceDemographics: entry.audienceDemographics || null,
         };
       })
       .filter(function (entry) { return !isNaN(entry.pulledAt.getTime()); })
@@ -542,6 +572,202 @@
     });
   }
 
+  // ---------- audience demographics ----------
+
+  // Shared visual for both "top countries" and "top cities": a ranked list
+  // with a proportional bar rather than a full chart. Simpler than an SVG
+  // bar chart for a horizontal ranking, and still a valid sequential
+  // (single-hue) magnitude encoding per the usual chart-form rules.
+  function renderRankList(listId, emptyId, entries, labelFn, limit) {
+    var list = document.getElementById(listId);
+    var emptyMsg = document.getElementById(emptyId);
+    list.innerHTML = "";
+
+    if (!entries.length) {
+      list.hidden = true;
+      emptyMsg.hidden = false;
+      return;
+    }
+    list.hidden = false;
+    emptyMsg.hidden = true;
+
+    var sorted = entries.slice().sort(function (a, b) { return b.count - a.count; }).slice(0, limit);
+    var maxCount = sorted[0].count;
+
+    sorted.forEach(function (entry, index) {
+      var item = document.createElement("li");
+      item.className = "rank-item";
+
+      var indexEl = document.createElement("span");
+      indexEl.className = "rank-index";
+      indexEl.textContent = index + 1;
+      item.appendChild(indexEl);
+
+      var main = document.createElement("div");
+      main.className = "rank-main";
+
+      var labelRow = document.createElement("div");
+      labelRow.className = "rank-label-row";
+      var nameEl = document.createElement("span");
+      nameEl.className = "rank-name";
+      nameEl.textContent = labelFn(entry);
+      var valueEl = document.createElement("span");
+      valueEl.className = "rank-value";
+      valueEl.textContent = formatFullNumber(entry.count);
+      labelRow.appendChild(nameEl);
+      labelRow.appendChild(valueEl);
+
+      var track = document.createElement("div");
+      track.className = "rank-bar-track";
+      var fill = document.createElement("div");
+      fill.className = "rank-bar-fill";
+      fill.style.width = ((entry.count / maxCount) * 100) + "%";
+      track.appendChild(fill);
+
+      main.appendChild(labelRow);
+      main.appendChild(track);
+      item.appendChild(main);
+
+      list.appendChild(item);
+    });
+  }
+
+  var AGE_ORDER = ["13-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"];
+  var GENDER_SERIES = [
+    { code: "F", color: "var(--series-1)" },
+    { code: "M", color: "var(--series-2)" },
+    { code: "U", color: "var(--series-3)" },
+  ];
+
+  function renderAgeGenderChart(ageGenderData) {
+    var wrap = document.getElementById("ageGenderChart");
+    var emptyMsg = document.getElementById("ageGenderChartEmpty");
+
+    if (!ageGenderData.length) {
+      wrap.hidden = true;
+      emptyMsg.hidden = false;
+      return;
+    }
+    wrap.hidden = false;
+    emptyMsg.hidden = true;
+
+    var countByAgeGender = {};
+    ageGenderData.forEach(function (entry) {
+      countByAgeGender[entry.ageRange + "|" + entry.gender] = entry.count;
+    });
+    function countFor(age, gender) { return countByAgeGender[age + "|" + gender] || 0; }
+
+    var maxCount = 0;
+    AGE_ORDER.forEach(function (age) {
+      GENDER_SERIES.forEach(function (series) {
+        maxCount = Math.max(maxCount, countFor(age, series.code));
+      });
+    });
+    if (maxCount === 0) maxCount = 1;
+
+    var width = 600, height = 260;
+    var padL = 44, padR = 12, padT = 12, padB = 30;
+    var plotW = width - padL - padR;
+    var plotH = height - padT - padB;
+
+    var groupWidth = plotW / AGE_ORDER.length;
+    var groupPadding = 10;
+    var barGap = 2;
+    var barWidth = Math.min(24, (groupWidth - groupPadding * 2 - barGap * (GENDER_SERIES.length - 1)) / GENDER_SERIES.length);
+
+    function yPos(v) { return padT + plotH - (v / maxCount) * plotH; }
+
+    var svg = makeSvgEl("svg", { viewBox: "0 0 " + width + " " + height, role: "img", "aria-label": "Followers by age and gender" });
+
+    // gridlines
+    var gridSteps = 4;
+    for (var g = 0; g <= gridSteps; g++) {
+      var gy = padT + (plotH / gridSteps) * g;
+      svg.appendChild(makeSvgEl("line", { x1: padL, x2: width - padR, y1: gy, y2: gy, stroke: "var(--gridline)", "stroke-width": "1" }));
+      var val = maxCount - (maxCount / gridSteps) * g;
+      var tick = makeSvgEl("text", { x: padL - 8, y: gy + 4, "text-anchor": "end", fill: "var(--text-muted)", "font-size": "10" });
+      tick.textContent = formatCompactNumber(val);
+      svg.appendChild(tick);
+    }
+
+    svg.appendChild(makeSvgEl("line", { x1: padL, x2: width - padR, y1: padT + plotH, y2: padT + plotH, stroke: "var(--baseline)", "stroke-width": "1" }));
+
+    wrap.innerHTML = "";
+    var tooltip = document.createElement("div");
+    tooltip.className = "chart-tooltip";
+
+    AGE_ORDER.forEach(function (age, groupIndex) {
+      var groupStart = padL + groupWidth * groupIndex + groupPadding;
+
+      GENDER_SERIES.forEach(function (series, seriesIndex) {
+        var value = countFor(age, series.code);
+        var barX = groupStart + seriesIndex * (barWidth + barGap);
+        var barY = yPos(value);
+        var barHeight = padT + plotH - barY;
+
+        var rect = makeSvgEl("rect", {
+          x: barX, y: barY, width: Math.max(barWidth, 0), height: Math.max(barHeight, 0),
+          rx: 3, fill: series.color, "class": "bar-mark",
+        });
+        rect.style.cursor = "pointer";
+
+        rect.addEventListener("pointerenter", function () {
+          rect.setAttribute("opacity", "0.8");
+          tooltip.innerHTML = "";
+          var labelEl = document.createElement("div");
+          labelEl.className = "tt-label";
+          labelEl.textContent = age + " · " + formatGenderLabel(series.code);
+          var valueEl = document.createElement("div");
+          valueEl.className = "tt-value";
+          valueEl.textContent = formatFullNumber(value) + " followers";
+          tooltip.appendChild(labelEl);
+          tooltip.appendChild(valueEl);
+          var xPercent = ((barX + barWidth / 2) / width) * 100;
+          var yPercent = Math.max((barY / height) * 100, 15);
+          tooltip.style.left = xPercent + "%";
+          tooltip.style.top = yPercent + "%";
+          if (xPercent < 15) tooltip.style.transform = "translate(0, -110%)";
+          else if (xPercent > 85) tooltip.style.transform = "translate(-100%, -110%)";
+          else tooltip.style.transform = "translate(-50%, -110%)";
+          tooltip.classList.add("visible");
+        });
+        rect.addEventListener("pointerleave", function () {
+          rect.setAttribute("opacity", "1");
+          tooltip.classList.remove("visible");
+        });
+
+        svg.appendChild(rect);
+      });
+
+      var label = makeSvgEl("text", {
+        x: groupStart + (groupWidth - groupPadding * 2) / 2, y: height - 8,
+        "text-anchor": "middle", fill: "var(--text-muted)", "font-size": "10",
+      });
+      label.textContent = age;
+      svg.appendChild(label);
+    });
+
+    // legend
+    var legend = document.createElement("div");
+    legend.className = "chart-legend";
+    GENDER_SERIES.forEach(function (series) {
+      var item = document.createElement("div");
+      item.className = "chart-legend-item";
+      var swatch = document.createElement("span");
+      swatch.className = "chart-legend-swatch";
+      swatch.style.background = series.color;
+      var label = document.createElement("span");
+      label.textContent = formatGenderLabel(series.code);
+      item.appendChild(swatch);
+      item.appendChild(label);
+      legend.appendChild(item);
+    });
+
+    wrap.appendChild(legend);
+    wrap.appendChild(svg);
+    wrap.appendChild(tooltip);
+  }
+
   // ---------- filter-driven render ----------
 
   // The time range filter scopes exactly the section it's positioned above:
@@ -583,6 +809,25 @@
     );
   }
 
+  // ---------- tabs ----------
+
+  function setupTabs() {
+    var tabs = [
+      { btn: document.getElementById("tabBtnOverview"), panel: document.getElementById("tabOverview") },
+      { btn: document.getElementById("tabBtnAudience"), panel: document.getElementById("tabAudience") },
+    ];
+
+    tabs.forEach(function (tab) {
+      tab.btn.addEventListener("click", function () {
+        tabs.forEach(function (other) {
+          var isActive = other === tab;
+          other.btn.setAttribute("aria-selected", isActive ? "true" : "false");
+          other.panel.hidden = !isActive;
+        });
+      });
+    });
+  }
+
   // ---------- boot ----------
 
   fetch(DATA_URL)
@@ -606,6 +851,21 @@
       topNSelect.addEventListener("change", rerender);
 
       rerender();
+
+      // Audience demographics are a lifetime/current-snapshot metric, not a
+      // day-window one - render once from the latest pull, not re-scoped by
+      // the time range filter (which only governs the Overview tab).
+      var latest = history[history.length - 1];
+      var demographics = (latest && latest.audienceDemographics) || { ageGender: [], country: [], city: [] };
+      renderAgeGenderChart(demographics.ageGender);
+      renderRankList("countryList", "countryListEmpty", demographics.country, function (entry) {
+        return formatCountryName(entry.countryCode);
+      }, 8);
+      renderRankList("cityList", "cityListEmpty", demographics.city, function (entry) {
+        return entry.city;
+      }, 8);
+
+      setupTabs();
     })
     .catch(function (err) {
       document.getElementById("accountMeta").textContent = "Couldn't load stats data.";

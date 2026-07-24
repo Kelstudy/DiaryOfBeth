@@ -41,6 +41,7 @@ from igApi import (
     pullMediaSinceDate,
     pullAccountReachLastNDays,
     pullAccountProfileViewsLastNDays,
+    pullFollowerDemographics,
     calculateEngagementRate,
     DEFAULT_POST_COUNT,
 )
@@ -175,11 +176,41 @@ def buildSnapshot(accessToken, userId, pullMode, pullValue):
     pulledSetSummary["profileViews"] = totalProfileViews
     pulledSetSummary["profileViewsError"] = profileViewsError
 
+    audienceDemographics = buildAudienceDemographics(accessToken, userId)
+
     return {
         "pulledAt": datetime.now(timezone.utc).isoformat(),
         "profile": profileRecord,
         "recentPosts": postRecords,
         "pulledSetSummary": pulledSetSummary,
+        "audienceDemographics": audienceDemographics,
+    }
+
+
+def buildAudienceDemographics(accessToken, userId):
+    """
+    Pull follower demographics (lifetime/current snapshot, not a day-window
+    metric) as three separate breakdowns and shape each into a clean list
+    of records for storage.
+    """
+    ageGenderResults, ageGenderError = pullFollowerDemographics(accessToken, userId, "age,gender")
+    countryResults, countryError = pullFollowerDemographics(accessToken, userId, "country")
+    cityResults, cityError = pullFollowerDemographics(accessToken, userId, "city")
+
+    return {
+        "ageGender": [
+            {"ageRange": entry["dimensionValues"][0], "gender": entry["dimensionValues"][1], "count": entry["value"]}
+            for entry in (ageGenderResults or [])
+        ],
+        "country": [
+            {"countryCode": entry["dimensionValues"][0], "count": entry["value"]}
+            for entry in (countryResults or [])
+        ],
+        "city": [
+            {"city": entry["dimensionValues"][0], "count": entry["value"]}
+            for entry in (cityResults or [])
+        ],
+        "error": ageGenderError or countryError or cityError,
     }
 
 

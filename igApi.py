@@ -274,6 +274,46 @@ def pullAccountProfileViewsLastNDays(accessToken, userId, days):
     return totalProfileViews, None
 
 
+def pullFollowerDemographics(accessToken, userId, breakdown):
+    """
+    Pull a follower demographic breakdown - confirmed live to accept
+    breakdown="age,gender" (combined), "country", or "city". Lifetime/
+    current-snapshot data, not a day-window metric like reach or profile
+    views, so it's pulled once per run rather than over a since/until range.
+
+    Returns a list of {"dimensionValues": [...], "value": N} dicts (the
+    raw dimension_values order matches the requested breakdown fields, e.g.
+    ["25-34", "F"] for breakdown="age,gender"), or (None, error).
+    """
+    response = requests.get(
+        f"{BASE_URL}/{userId}/insights",
+        params={
+            "metric": "follower_demographics",
+            "period": "lifetime",
+            "metric_type": "total_value",
+            "breakdown": breakdown,
+            "access_token": accessToken,
+        },
+    )
+
+    if not response.ok:
+        return None, response.json().get("error", {}).get("message", response.text)
+
+    responseData = response.json().get("data", [{}])
+    if not responseData:
+        return None, "No follower_demographics data returned"
+
+    breakdowns = responseData[0].get("total_value", {}).get("breakdowns", [{}])
+    rawResults = breakdowns[0].get("results", []) if breakdowns else []
+
+    results = [
+        {"dimensionValues": entry.get("dimension_values", []), "value": entry.get("value", 0)}
+        for entry in rawResults
+    ]
+
+    return results, None
+
+
 def isAtOrAfter(isoTimestamp, cutoffDate):
     """Check whether a post's timestamp falls at or after cutoffDate."""
     try:

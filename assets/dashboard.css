@@ -10,6 +10,8 @@
   --border:         rgba(255, 255, 255, 0.10);
   --series-1:       #3987e5;
   --series-1-wash:  rgba(57, 135, 229, 0.10);
+  --series-2:       #d95926;
+  --series-3:       #199e70;
   --good:           #0ca30c;
   --bad:            #e66767;
 }
@@ -355,6 +357,124 @@ html, body {
 .post-engagement {
   color: var(--good);
   font-weight: 700;
+}
+
+/* ---------- Tabs ---------- */
+
+.tab-nav {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.tab-btn {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 4px;
+  margin-right: 20px;
+  cursor: pointer;
+}
+
+.tab-btn:hover { color: var(--text-primary); }
+
+.tab-btn[aria-selected="true"] {
+  color: var(--text-primary);
+  border-bottom-color: var(--series-1);
+}
+
+/* ---------- Legend ---------- */
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ---------- Rank list (top cities) ---------- */
+
+.rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rank-item {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.rank-item .rank-index {
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.rank-item .rank-bar-track {
+  position: relative;
+  height: 6px;
+  background: var(--gridline);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.rank-item .rank-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--series-1);
+  border-radius: 3px;
+}
+
+.rank-item .rank-label-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.rank-item .rank-name {
+  color: var(--text-primary);
+}
+
+.rank-item .rank-value {
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rank-item .rank-main {
+  display: flex;
+  flex-direction: column;
 }
 
 /* ---------- Footer ---------- */

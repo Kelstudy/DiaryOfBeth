@@ -65,8 +65,8 @@ There is no test suite, linter, or build step configured.
 3. **`igApi.py`** — owns all the Instagram Graph API pull logic, imported by `pullData.py`:
    - `loadToken()` reads `token.json`.
    - `pullProfile`, `pullMostRecentPosts`, `pullMediaSinceDate`, `pullMediaWithinLastNDays`,
-     `pullMediaInsights`, `pullAccountReachLastNDays`, `pullAccountProfileViewsLastNDays` — the API
-     calls.
+     `pullMediaInsights`, `pullAccountReachLastNDays`, `pullAccountProfileViewsLastNDays`,
+     `pullFollowerDemographics` — the API calls.
    - `pullMostRecentPosts(accessToken, userId, postCount)` paginates through `paging.next` URLs until
      it has collected exactly `postCount` posts (or the account runs out), rather than issuing a
      single request capped at whatever the API's default page size allows.
@@ -85,6 +85,12 @@ There is no test suite, linter, or build step configured.
      "total value" only on this API: a plain `period=day` request returns an empty data array with no
      error, so it requires `metric_type=total_value` and returns one pre-summed number rather than a
      daily list to add up, unlike `reach`.
+   - `pullFollowerDemographics(accessToken, userId, breakdown)` pulls the `follower_demographics`
+     metric — also `metric_type=total_value`, `period=lifetime` (a current-snapshot value, not a
+     day-window one). `breakdown` accepts `"age,gender"` (combined), `"country"`, or `"city"`; confirmed
+     live that all three work on this account. Returns a list of `{"dimensionValues": [...], "value"}`
+     — `dimensionValues` order matches the requested breakdown fields (e.g. `["25-34", "F"]` for
+     `"age,gender"`).
    - `calculateEngagementRate` = (likes + comments) / followers, as a percentage.
    - Note: `total_interactions` is the correct current metric name — `engagement` is not a valid
      field.
@@ -108,6 +114,10 @@ There is no test suite, linter, or build step configured.
      entries predating this change use `recentWindow` or `last30Days` instead — the dedup check in
      `isDuplicateOfLastSnapshot` treats these as distinct from current-schema snapshots, which is
      correct since the schema differs.)
+   - `buildAudienceDemographics` pulls all three `pullFollowerDemographics` breakdowns and reshapes
+     each into a clean list (`ageGender`, `country`, `city`), stored under the snapshot's
+     `audienceDemographics` key — separate from `pulledSetSummary` since it's account-lifetime data,
+     not scoped to the pull's day window/post count.
    - `loadExistingHistory` / `saveHistory` read and rewrite `data/statsHistory.json` as a JSON array
      (append-only, powers time-series charts on the eventual frontend).
    - `isDuplicateOfLastSnapshot` compares a freshly built snapshot to the last saved one (ignoring the
@@ -122,9 +132,18 @@ There is no test suite, linter, or build step configured.
   **`assets/dashboard.css`** + **`assets/dashboard.js`**. No build step, no framework, no CDN
   dependency — everything is hand-written vanilla JS/CSS, self-contained.
 - `dashboard.js` fetches the full history, normalizes each entry (`getSummary()` reads whichever of
-  `pulledSetSummary` / `recentWindow` / `last30Days` is present, so old-schema entries still render),
-  then renders a masthead (avatar photo, username, `formatAccountType()`-title-cased account type,
-  following/posts/followers counts) plus a filter-driven dashboard body — see Filters below.
+  `pulledSetSummary` / `recentWindow` / `last30Days` is present, so old-schema entries still render;
+  `audienceDemographics` passes through as-is, `null` for older entries that predate it), then renders
+  a masthead (avatar photo, username, `formatAccountType()`-title-cased account type, following/posts/
+  followers counts) plus two tabs — see Filters and Tabs below.
+- **Two tabs** (`#tabBtnOverview` / `#tabBtnAudience`, plain `hidden`-attribute show/hide via
+  `setupTabs()`, no routing): **Overview** is everything described below under Filters; **Audience**
+  renders the latest pull's `audienceDemographics` once at boot (not re-scoped by the time range
+  filter, which only governs the Overview tab, since demographics are a lifetime/current-snapshot
+  value, not a day-window one) — a hand-rolled SVG grouped bar chart (`renderAgeGenderChart`, age
+  bracket × gender, 3-series categorical with legend + per-bar hover tooltip) plus two `renderRankList`
+  calls (top 8 countries via `formatCountryName()`'s ISO code lookup, top 8 cities) sharing one ranked
+  list-with-proportional-bar component rather than a second chart type.
 - The masthead avatar is a static file at `assets/profile.jpg` (not pulled from the API — Instagram's
   Graph API doesn't expose a fetchable profile picture URL for this product), referenced directly in
   `index.html`. Replace that file to change the photo; no code change needed.

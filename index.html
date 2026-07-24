@@ -43,61 +43,103 @@
       </p>
     </section>
 
-    <section class="kpi-row" id="kpiRowFixed" aria-label="Current stats"></section>
-
-    <div class="section-heading">
-      <h2>Performance trends</h2>
-      <label class="filter-field">
-        <span>Time range</span>
-        <select id="rangeSelect">
-          <option value="7">Last 7 days</option>
-          <option value="30" selected>Last 30 days</option>
-          <option value="all">All time</option>
-        </select>
-      </label>
+    <div class="tab-nav" role="tablist" aria-label="Dashboard sections">
+      <button class="tab-btn" id="tabBtnOverview" role="tab" aria-selected="true" aria-controls="tabOverview">Overview</button>
+      <button class="tab-btn" id="tabBtnAudience" role="tab" aria-selected="false" aria-controls="tabAudience">Audience</button>
     </div>
 
-    <section class="kpi-row" id="kpiRowFiltered" aria-label="Stats for selected range"></section>
+    <div id="tabOverview" role="tabpanel" aria-labelledby="tabBtnOverview">
 
-    <section class="chart-grid">
-      <div class="card">
-        <div class="card-head">
-          <h2>Follower growth</h2>
-          <p class="card-sub">Followers at time of each pull, within the selected range</p>
-        </div>
-        <div class="chart-wrap" id="followerChart"></div>
-        <p class="chart-empty" id="followerChartEmpty" hidden>Not enough history yet — check back after a few more pulls.</p>
-      </div>
+      <section class="kpi-row" id="kpiRowFixed" aria-label="Current stats"></section>
 
-      <div class="card">
-        <div class="card-head">
-          <h2>Engagement rate</h2>
-          <p class="card-sub">Average across each pulled post set, within the selected range</p>
-        </div>
-        <div class="chart-wrap" id="engagementChart"></div>
-        <p class="chart-empty" id="engagementChartEmpty" hidden>Not enough history yet — check back after a few more pulls.</p>
-      </div>
-    </section>
-
-    <section class="card posts-card">
-      <div class="card-head posts-card-head">
-        <div>
-          <h2>Top posts</h2>
-          <p class="card-sub" id="postsSub">By engagement rate, within the selected time range</p>
-        </div>
+      <div class="section-heading">
+        <h2>Performance trends</h2>
         <label class="filter-field">
-          <span>Show top</span>
-          <select id="topNSelect">
-            <option value="5">5 posts</option>
-            <option value="10" selected>10 posts</option>
-            <option value="15">15 posts</option>
-            <option value="25">25 posts</option>
-            <option value="9999">All pulled posts</option>
+          <span>Time range</span>
+          <select id="rangeSelect">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="all">All time</option>
           </select>
         </label>
       </div>
-      <div class="posts-grid" id="postsGrid"></div>
-    </section>
+
+      <section class="kpi-row" id="kpiRowFiltered" aria-label="Stats for selected range"></section>
+
+      <section class="chart-grid">
+        <div class="card">
+          <div class="card-head">
+            <h2>Follower growth</h2>
+            <p class="card-sub">Followers at time of each pull, within the selected range</p>
+          </div>
+          <div class="chart-wrap" id="followerChart"></div>
+          <p class="chart-empty" id="followerChartEmpty" hidden>Not enough history yet — check back after a few more pulls.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Engagement rate</h2>
+            <p class="card-sub">Average across each pulled post set, within the selected range</p>
+          </div>
+          <div class="chart-wrap" id="engagementChart"></div>
+          <p class="chart-empty" id="engagementChartEmpty" hidden>Not enough history yet — check back after a few more pulls.</p>
+        </div>
+      </section>
+
+      <section class="card posts-card">
+        <div class="card-head posts-card-head">
+          <div>
+            <h2>Top posts</h2>
+            <p class="card-sub" id="postsSub">By engagement rate, within the selected time range</p>
+          </div>
+          <label class="filter-field">
+            <span>Show top</span>
+            <select id="topNSelect">
+              <option value="5">5 posts</option>
+              <option value="10" selected>10 posts</option>
+              <option value="15">15 posts</option>
+              <option value="25">25 posts</option>
+              <option value="9999">All pulled posts</option>
+            </select>
+          </label>
+        </div>
+        <div class="posts-grid" id="postsGrid"></div>
+      </section>
+
+    </div>
+
+    <div id="tabAudience" role="tabpanel" aria-labelledby="tabBtnAudience" hidden>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Age &amp; gender</h2>
+          <p class="card-sub">Share of followers by age bracket and gender</p>
+        </div>
+        <div class="chart-wrap" id="ageGenderChart"></div>
+        <p class="chart-empty" id="ageGenderChartEmpty" hidden>No demographic data available yet.</p>
+      </section>
+
+      <section class="chart-grid">
+        <div class="card">
+          <div class="card-head">
+            <h2>Top countries</h2>
+            <p class="card-sub">Where followers are located</p>
+          </div>
+          <ol class="rank-list" id="countryList"></ol>
+          <p class="chart-empty" id="countryListEmpty" hidden>No demographic data available yet.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Top cities</h2>
+            <p class="card-sub">Most-represented cities among followers</p>
+          </div>
+          <ol class="rank-list" id="cityList"></ol>
+          <p class="chart-empty" id="cityListEmpty" hidden>No demographic data available yet.</p>
+        </div>
+      </section>
+
+    </div>
 
     <footer class="page-footer">
       <p>Data pulled automatically from the Instagram Graph API. Source: <a href="https://github.com/Kelstudy/DiaryOfBeth" target="_blank" rel="noopener">DiaryOfBeth on GitHub</a>.</p>
