@@ -35,6 +35,15 @@
      primary CTA, tab indicator, a couple of accent borders. */
   --brand-gradient: linear-gradient(135deg, #ffb6c9 0%, #ec6a9c 50%, #c94277 100%);
   --brand-glow:     rgba(217, 79, 138, 0.14);
+
+  /* Elevation - every card-like surface uses these two steps (resting /
+     hover) instead of relying on the 1px border alone. A flat outlined box
+     reads as a wireframe; a soft shadow gives the page actual depth, which
+     is most of what separates "styled HTML" from "professional dashboard"
+     at a glance. Kept deliberately subtle - ink-tinted, not black, so it
+     stays warm on the pink page rather than looking like a generic UI kit. */
+  --shadow-resting: 0 1px 2px rgba(26, 18, 20, 0.05), 0 1px 4px rgba(26, 18, 20, 0.04);
+  --shadow-hover:   0 8px 20px rgba(26, 18, 20, 0.10), 0 2px 6px rgba(26, 18, 20, 0.06);
 }
 
 * { box-sizing: border-box; }
@@ -160,10 +169,28 @@ body {
   box-shadow: 0 4px 14px rgba(201, 66, 119, 0.35);
 }
 
+/* The two timestamp lines (#asOf, #pageUpdatedAt) are a paired, related
+   fact - "data pulled at X, page deployed at Y" - so they sit close to
+   each other, with the larger gap reserved for after the pair, before the
+   unrelated explainer card below. Equal margins on both (as if they were
+   three independent blocks) would visually flatten that relationship.
+   #pageUpdatedAt starts [hidden] and only appears once its API lookup
+   succeeds (see dashboard.js), so #asOf defaults to carrying the full gap
+   itself and only tightens up when the second line will actually render -
+   otherwise a failed lookup would leave #asOf's tight 2px margin with
+   nothing after it to provide the space before the explainer card. */
 .asof {
-  margin: 16px 0 20px;
+  margin: 16px 0 22px;
   color: var(--text-muted);
   font-size: 12px;
+}
+
+#asOf:has(+ #pageUpdatedAt:not([hidden])) {
+  margin-bottom: 2px;
+}
+
+#pageUpdatedAt {
+  margin-bottom: 22px;
 }
 
 /* ---------- Explainer ---------- */
@@ -176,6 +203,7 @@ body {
   padding: 16px 20px 16px 23px;
   margin-bottom: 24px;
   overflow: hidden;
+  box-shadow: var(--shadow-resting);
 }
 
 .explainer::before {
@@ -222,7 +250,7 @@ body {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 8px 0 16px;
+  margin: 4px 0 16px;
 }
 
 .section-heading h2 {
@@ -273,7 +301,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 .stat-tile {
@@ -281,10 +309,15 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px 18px;
-  transition: border-color 0.15s ease;
+  box-shadow: var(--shadow-resting);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
-.stat-tile:hover { border-color: rgba(26, 18, 20, 0.16); }
+.stat-tile:hover {
+  border-color: rgba(26, 18, 20, 0.16);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
 
 .stat-label {
   margin: 0 0 8px;
@@ -318,7 +351,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .card {
@@ -326,10 +359,15 @@ body {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 20px;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  box-shadow: var(--shadow-resting);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
-.card:hover { border-color: rgba(26, 18, 20, 0.16); }
+.card:hover {
+  border-color: rgba(26, 18, 20, 0.16);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
 
 .card-head h2 {
   margin: 0;
@@ -411,27 +449,32 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  box-shadow: var(--shadow-resting);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .post-card:hover {
   border-color: rgba(214, 41, 118, 0.5);
+  box-shadow: var(--shadow-hover);
   transform: translateY(-2px);
 }
 
 .post-type {
+  /* A solid badge rather than gradient-clipped text - at 10px, a
+     transparent-fill gradient anti-aliases a little soft and reads more
+     "influencer aesthetic" than "business document." A filled pill is the
+     standard professional-dashboard affordance for a repeated metadata
+     tag; the gradient stays reserved for hero content (.rate-price). */
   display: inline-block;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 6px;
-  /* Same saturated-only gradient as .rate-price, for the same contrast
-     reason - small text can't afford the brand gradient's pale stop. */
+  color: #ffffff;
   background: linear-gradient(90deg, #ec6a9c, #a83368);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-bottom: 8px;
 }
 
 .post-caption {
@@ -611,10 +654,15 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px 16px;
-  transition: border-color 0.15s ease;
+  box-shadow: var(--shadow-resting);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
-.rate-item:hover { border-color: rgba(214, 41, 118, 0.4); }
+.rate-item:hover {
+  border-color: rgba(214, 41, 118, 0.4);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
 
 .rate-label {
   margin: 0 0 6px;
@@ -708,6 +756,10 @@ body {
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    /* Screen-only depth cue - shadows print as muddy smudges rather than
+       rendering as light/elevation, so the border alone carries definition
+       between surfaces on paper. */
+    box-shadow: none !important;
   }
 
   @page {

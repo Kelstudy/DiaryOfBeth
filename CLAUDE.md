@@ -234,10 +234,27 @@ All paths below are relative to `scripts/` unless stated otherwise.
   the tab underline, and the explainer card's accent border. It is never used on anything that encodes
   data (chart marks, KPI values, rank-list bars all stay on the validated dataviz palette above) —
   mixing a decorative gradient into data encoding would break the "never a rainbow" categorical-color
-  rule the dataviz skill enforces elsewhere on this page. Post-type tags and rate-card prices use a
+  rule the dataviz skill enforces elsewhere on this page. Rate-card prices (`.rate-price`) use a
   **separate**, more saturated two-stop gradient (`linear-gradient(90deg, #ec6a9c, #a83368)`) rather
   than `--brand-gradient` directly — `--brand-gradient`'s pale starting stop reads too low-contrast as
   small `background-clip: text`, which matters more for actual pricing text than for a large button.
+  `.post-type` used the same gradient as clipped text originally, but was switched to a solid filled
+  pill badge in that gradient (background, not `background-clip: text`) — a repeated small metadata
+  tag read a little soft/"influencer aesthetic" as transparent-fill gradient text at 10-11px, and a
+  filled badge is the more standard professional-dashboard affordance for that role; the gradient stays
+  reserved for hero content like the price.
+- **Elevation**: every card-like surface (`.card`, `.stat-tile`, `.post-card`, `.rate-item`,
+  `.explainer`) carries `--shadow-resting` normally and lifts to `--shadow-hover` (`translateY(-2px)`
+  + a stronger shadow) on hover — added after the original flat-bordered-box treatment read as
+  underdesigned/wireframe-y rather than a finished dashboard; a soft ink-tinted shadow (not black, to
+  stay warm on the pink page) gives the page actual depth. Explicitly `box-shadow: none !important` in
+  `@media print` — shadows print as muddy smudges rather than rendering as light, so the border alone
+  carries surface definition on paper.
+- The two masthead timestamp lines (`#asOf`, `#pageUpdatedAt`) are a related pair ("data pulled at X,
+  page deployed at Y"), so they sit close together with the larger gap reserved for after the pair,
+  before the unrelated explainer card — `#asOf:has(+ #pageUpdatedAt:not([hidden]))` tightens `#asOf`'s
+  own bottom margin only when the second line will actually render, so a failed `renderPageDeploymentTime()`
+  lookup (which leaves `#pageUpdatedAt` `hidden`) doesn't leave too little space before the explainer.
 - Tab switches trigger a short fade/slide-in (`.tab-panel-enter`, re-triggered on every click via a
   remove-reflow-readd cycle in `setupTabs()`) rather than an instant `hidden` toggle — purely cosmetic
   polish, doesn't change what's shown.
