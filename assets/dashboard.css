@@ -90,6 +90,82 @@ body {
   padding: 32px 20px 64px;
 }
 
+/* ---------- Hero banner ---------- */
+
+/* Full-bleed photo behind the masthead - bleeds out to the edges of .page
+   itself (not the viewport) via negative margins matching .page's own
+   padding, so it stays inside the same 1040px-max reading column as
+   everything else rather than spanning the true browser width. */
+.hero-banner {
+  position: relative;
+  margin: -32px -20px 0;
+  height: 300px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+
+.hero-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-overlay-dark {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(201, 66, 119, 0.15) 0%, rgba(26, 18, 20, 0.55) 100%);
+}
+
+.hero-overlay-fade {
+  /* Fades the photo into the page's own pink plane at the bottom, so the
+     hero reads as part of the page rather than a hard-edged banner. */
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, var(--page-plane) 100%);
+}
+
+.hero-banner .masthead {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0 20px 22px;
+}
+
+.hero-banner .masthead h1 {
+  color: #ffffff;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+}
+
+.hero-banner .subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hero-banner .avatar-ring {
+  width: 84px;
+  height: 84px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.hero-banner .btn-outline {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(6px);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.hero-banner .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+@media (max-width: 640px) {
+  .hero-banner { height: 240px; }
+  .hero-banner .avatar-ring { width: 64px; height: 64px; }
+}
+
 /* ---------- Masthead ---------- */
 
 .masthead {
@@ -259,6 +335,40 @@ body {
 .explainer strong {
   color: var(--text-primary);
   font-weight: 600;
+}
+
+/* Two-column layout only for the bio card (the one with a lifestyle photo) -
+   the Collabs-tab reuse of .explainer for its own intro text has no photo
+   and must stay a single block column, hence scoping via :has() rather
+   than a blanket rule. */
+.explainer:has(.explainer-photo) {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 20px;
+  align-items: center;
+}
+
+.explainer-photo {
+  align-self: stretch;
+}
+
+.explainer-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 150px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+  .explainer:has(.explainer-photo) {
+    grid-template-columns: 1fr;
+  }
+
+  .explainer-photo img {
+    max-height: 180px;
+  }
 }
 
 /* ---------- Filters ---------- */
@@ -877,6 +987,50 @@ body {
 
   /* ---- Global compaction - every role below gets a much smaller,
      denser treatment than its touch-friendly screen sizing. ---- */
+
+  /* Hero photo and the lifestyle photo both dropped in print, same reasoning
+     as the post thumbnails: a signed/placeholder image adds print weight and
+     risks the tuned one-page-per-tab layout for no benefit on a document
+     that's read as text. Masthead reverts to plain dark-on-white text since
+     it no longer has a photo backdrop to contrast against. */
+  .hero-banner {
+    position: static;
+    height: auto;
+    margin: 0 0 6px;
+    display: block;
+  }
+  .hero-photo,
+  .hero-overlay-dark,
+  .hero-overlay-fade {
+    display: none;
+  }
+  .hero-banner .masthead {
+    position: static;
+    padding: 0;
+  }
+  .hero-banner .masthead h1 {
+    color: var(--text-primary);
+    text-shadow: none;
+  }
+  .hero-banner .subtitle {
+    color: var(--text-secondary);
+  }
+  .hero-banner .avatar-ring {
+    width: 40px;
+    height: 40px;
+  }
+  .hero-banner .btn-outline {
+    color: var(--text-primary);
+    background: none;
+    backdrop-filter: none;
+    border-color: var(--border);
+  }
+  .explainer-photo {
+    display: none;
+  }
+  .explainer:has(.explainer-photo) {
+    display: block;
+  }
 
   .masthead h1 { font-size: 17px; }
   .subtitle { font-size: 11px; }

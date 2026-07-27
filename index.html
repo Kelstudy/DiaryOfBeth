@@ -17,38 +17,53 @@
 <body>
   <div class="page">
 
-    <header class="masthead">
-      <div class="masthead-identity">
-        <div class="avatar-ring">
-          <img class="avatar" id="avatarImg" src="assets/profile.jpg" alt="@thediaryofbeth profile photo">
+    <div class="hero-banner">
+      <!-- PLACEHOLDER 1: hero photo of Beth. Swap assets/hero-placeholder.svg
+           for a real image (same filename, or update the src below). -->
+      <img class="hero-photo" id="heroPhoto" src="assets/hero-placeholder.svg" alt="">
+      <div class="hero-overlay-dark"></div>
+      <div class="hero-overlay-fade"></div>
+
+      <header class="masthead">
+        <div class="masthead-identity">
+          <div class="avatar-ring">
+            <img class="avatar" id="avatarImg" src="assets/profile.jpg" alt="@thediaryofbeth profile photo">
+          </div>
+          <div>
+            <h1 id="username">@thediaryofbeth</h1>
+            <p class="subtitle" id="accountMeta">Loading live stats…</p>
+          </div>
         </div>
-        <div>
-          <h1 id="username">@thediaryofbeth</h1>
-          <p class="subtitle" id="accountMeta">Loading live stats…</p>
+        <div class="masthead-actions">
+          <button type="button" class="btn-outline no-print" id="downloadPdfBtn">Download PDF</button>
+          <a id="profileLink" class="btn-gradient" href="https://instagram.com/thediaryofbeth" target="_blank" rel="noopener">
+            View on Instagram
+          </a>
         </div>
-      </div>
-      <div class="masthead-actions">
-        <button type="button" class="btn-outline no-print" id="downloadPdfBtn">Download PDF</button>
-        <a id="profileLink" class="btn-gradient" href="https://instagram.com/thediaryofbeth" target="_blank" rel="noopener">
-          View on Instagram
-        </a>
-      </div>
-    </header>
+      </header>
+    </div>
 
     <p class="asof" id="asOf"></p>
     <p class="asof" id="pageUpdatedAt" hidden></p>
 
     <section class="explainer">
-      <h2>Vegan content creator from London</h2>
-      <p>
-        Hi, I'm Beth :) I make content around veganism! I also sometimes touch on other topics such
-        as being queer, sober, neurodivergent &amp; child free by choice.
-      </p>
-      <p>
-        My page is all about being mindful towards others, animals and the planet! Any
-        collaborations that I do will only be with brands that sell vegan or cruelty free products
-        &lt;3 It's cool to be kind!
-      </p>
+      <div class="explainer-photo">
+        <!-- PLACEHOLDER 2: lifestyle photo. Swap assets/lifestyle-placeholder.svg
+             for a real image (same filename, or update the src below). -->
+        <img id="lifestylePhoto" src="assets/lifestyle-placeholder.svg" alt="">
+      </div>
+      <div class="explainer-text">
+        <h2>Vegan content creator from London</h2>
+        <p>
+          Hi, I'm Beth :) I make content around veganism! I also sometimes touch on other topics such
+          as being queer, sober, neurodivergent &amp; child free by choice.
+        </p>
+        <p>
+          My page is all about being mindful towards others, animals and the planet! Any
+          collaborations that I do will only be with brands that sell vegan or cruelty free products
+          &lt;3 It's cool to be kind!
+        </p>
+      </div>
     </section>
 
     <div class="tab-nav" role="tablist" aria-label="Dashboard sections">
