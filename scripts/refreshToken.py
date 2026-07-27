@@ -27,6 +27,11 @@ import requests
 
 REFRESH_ENDPOINT = "https://graph.instagram.com/refresh_access_token"
 
+# Without an explicit timeout, requests waits forever on a stalled
+# connection - see igApi.py's REQUEST_TIMEOUT_SECONDS for the incident
+# this is guarding against.
+REQUEST_TIMEOUT_SECONDS = 30
+
 
 def loadTokenRecord(tokenPath="token.json"):
     with open(tokenPath, "r") as tokenFile:
@@ -43,6 +48,7 @@ def refreshAccessToken(currentAccessToken):
     response = requests.get(
         REFRESH_ENDPOINT,
         params={"grant_type": "ig_refresh_token", "access_token": currentAccessToken},
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     responseData = response.json()

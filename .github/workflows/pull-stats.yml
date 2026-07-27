@@ -43,6 +43,11 @@ concurrency:
 jobs:
   pull:
     runs-on: ubuntu-latest
+    # Hard ceiling so a hung run (e.g. a stalled request slipping past the
+    # per-request timeouts in scripts/igApi.py) self-terminates in minutes
+    # instead of blocking the concurrency queue for hours - GitHub's own
+    # default job timeout is 360 minutes, way too long to sit queued behind.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 

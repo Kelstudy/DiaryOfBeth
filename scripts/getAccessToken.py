@@ -106,7 +106,7 @@ def exchangeCodeForShortLivedToken(appId, appSecret, redirectUri, authorizationC
         "code": authorizationCode,
     }
 
-    response = requests.post(tokenEndpoint, data=formData)
+    response = requests.post(tokenEndpoint, data=formData, timeout=30)
     response.raise_for_status()
     responseData = response.json()
 
@@ -130,7 +130,7 @@ def exchangeForLongLivedToken(appSecret, shortLivedToken):
         "access_token": shortLivedToken,
     }
 
-    response = requests.get(exchangeEndpoint, params=queryParams)
+    response = requests.get(exchangeEndpoint, params=queryParams, timeout=30)
     response.raise_for_status()
     responseData = response.json()
 

@@ -15,6 +15,14 @@ import requests
 
 BASE_URL = "https://graph.instagram.com"
 
+# Every request below passes this. Without an explicit timeout, requests
+# waits forever on a stalled connection - with a pulled-post count now in
+# the hundreds (each needing its own insights call), a single stalled
+# request with no timeout hangs the entire GitHub Actions job until it
+# hits the runner's multi-hour default limit, which is what actually
+# happened on 2026-07-27.
+REQUEST_TIMEOUT_SECONDS = 30
+
 # Default post count when pulling by post count rather than by day window.
 DEFAULT_POST_COUNT = 10
 
@@ -44,6 +52,7 @@ def pullProfile(accessToken, userId):
     response = requests.get(
         f"{BASE_URL}/{userId}",
         params={"fields": profileFields, "access_token": accessToken},
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     return response.json()
@@ -71,7 +80,7 @@ def pullMostRecentPosts(accessToken, userId, postCount):
     collectedItems = []
 
     while requestUrl and len(collectedItems) < postCount:
-        response = requests.get(requestUrl, params=requestParams)
+        response = requests.get(requestUrl, params=requestParams, timeout=REQUEST_TIMEOUT_SECONDS)
         response.raise_for_status()
         responseData = response.json()
 
@@ -115,7 +124,7 @@ def pullMediaSinceDate(accessToken, userId, cutoffDate):
     pageCount = 0
 
     while requestUrl:
-        response = requests.get(requestUrl, params=requestParams)
+        response = requests.get(requestUrl, params=requestParams, timeout=REQUEST_TIMEOUT_SECONDS)
         response.raise_for_status()
         responseData = response.json()
         pageCount += 1
@@ -181,6 +190,7 @@ def pullMediaInsights(accessToken, mediaId, productType):
     combinedResponse = requests.get(
         f"{BASE_URL}/{mediaId}/insights",
         params={"metric": ",".join(metricList), "access_token": accessToken},
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
     if combinedResponse.ok:
@@ -196,6 +206,7 @@ def pullMediaInsights(accessToken, mediaId, productType):
         singleResponse = requests.get(
             f"{BASE_URL}/{mediaId}/insights",
             params={"metric": metricName, "access_token": accessToken},
+            timeout=REQUEST_TIMEOUT_SECONDS,
         )
         if singleResponse.ok:
             metricEntry = singleResponse.json()["data"][0]
@@ -225,6 +236,7 @@ def pullAccountReachLastNDays(accessToken, userId, days):
             "until": untilTime,
             "access_token": accessToken,
         },
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
     if not response.ok:
@@ -260,6 +272,7 @@ def pullAccountProfileViewsLastNDays(accessToken, userId, days):
             "until": untilTime,
             "access_token": accessToken,
         },
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
     if not response.ok:
@@ -296,6 +309,7 @@ def pullAccountViewsLastNDays(accessToken, userId, days):
             "until": untilTime,
             "access_token": accessToken,
         },
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
     if not response.ok:
@@ -340,6 +354,7 @@ def pullNetFollowersLastNDays(accessToken, userId, days):
             "until": untilTime,
             "access_token": accessToken,
         },
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
     if not response.ok:
@@ -383,6 +398,7 @@ def pullFollowerDemographics(accessToken, userId, breakdown):
             "breakdown": breakdown,
             "access_token": accessToken,
         },
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
     if not response.ok:
