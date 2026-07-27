@@ -192,28 +192,11 @@ All paths below are relative to `scripts/` unless stated otherwise.
   gradient border directly, since `border` can't take a gradient value without `border-image` hacks.
   Carries its own `box-shadow` (a soft `--brand-glow` bloom plus a tight dark contact shadow) so it
   reads as the masthead's visual anchor rather than sitting flush with the page.
-- **Two more manually-supplied photo slots, currently placeholders** (account owner hasn't supplied the
-  actual photos yet) — both are plain `<img>` tags pointing at self-contained placeholder SVGs (dashed
-  border, "PLACEHOLDER N" label, no external requests) so it's obvious in-browser exactly what still
-  needs a real photo. To fill one in, replace the SVG file at the same path (or point the `src` at a
-  new file) — no other code change needed:
-  - **Placeholder 1 — hero photo** (`assets/hero-placeholder.svg`, `#heroPhoto` in `index.html`): a
-    full-bleed banner (`.hero-banner`) behind the masthead. Bleeds to the edges of `.page` itself via
-    negative margins matching `.page`'s own padding — not a true 100vw bleed to the browser edge, since
-    `.page` is itself a centered max-width column and going further would need a `calc(-50vw + 50%)`
-    trick this didn't need. Two overlay layers sit on top: a dark diagonal gradient for text contrast
-    against an arbitrary photo, and a fade-to-`--page-plane` gradient at the bottom so the banner reads
-    as part of the page rather than a hard-edged strip. The masthead (avatar/name/subtitle/buttons) is
-    nested *inside* `.hero-banner` and repositioned via `.hero-banner .masthead …` descendant
-    overrides (white text with a shadow, translucent frosted buttons) rather than a second copy of the
-    masthead markup — same ids/classes throughout, so `dashboard.js` doesn't need to know the hero
-    exists. Dropped entirely in print (see PDF export below).
-  - **Placeholder 2 — lifestyle photo** (`assets/lifestyle-placeholder.svg`, `#lifestylePhoto` in
-    `index.html`): sits in a new `.explainer-photo` column inside the bio card, which becomes a
-    2-column CSS grid via `.explainer:has(.explainer-photo)` — scoped with `:has()` rather than a
-    blanket `.explainer` rule because the Collabs tab reuses the same `.explainer` class for its own
-    intro text with no photo, and would otherwise have its `<h2>`/`<p>` incorrectly split into grid
-    columns. Collapses to a single column under 640px. Dropped in print, same as the hero.
+- **No hero or lifestyle photo** — a hero-banner-behind-the-masthead treatment and a two-column bio
+  card with a lifestyle photo were both tried (each with a labeled placeholder image, since the account
+  owner didn't have real photos yet) and then explicitly reverted: decided not to use photos in these
+  spots at all. Only the masthead avatar (`assets/profile.jpg`) and real post thumbnails (see
+  `buildPostRecord` above) use photos on this page.
 - **Manrope** (self-hosted, weights 700/800 only) is used for headings/display text (`.masthead h1`,
   `.section-heading h2`, `.card-head h2`, `.print-only-heading`, `.stat-value`) — body text stays on
   the default system font stack. `.card-head h2`/`.stat-value` were bumped from their original 600
