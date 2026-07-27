@@ -11,6 +11,14 @@
 
   var DATA_URL = "data/statsHistory.json";
 
+  // Public, unauthenticated GitHub REST API - CORS-enabled, no token needed.
+  // Used only to show when the site itself was last redeployed, which is a
+  // separate event from the data pull below: a data pull commits
+  // statsHistory.json, which is what *triggers* pages-build-deployment, but
+  // that deployment then takes its own ~30-90s to actually finish and go
+  // live, so the two timestamps are always slightly apart.
+  var GITHUB_REPO_API = "https://api.github.com/repos/Kelstudy/DiaryOfBeth";
+
   // ---------- formatting helpers ----------
 
   function formatCompactNumber(value) {
@@ -319,7 +327,40 @@
     if (profile.followersCount != null) metaParts.push(formatFullNumber(profile.followersCount) + " followers");
     document.getElementById("accountMeta").textContent = metaParts.join(" · ");
 
-    document.getElementById("asOf").textContent = "Page last updated " + formatDateAtTime(latest.pulledAt);
+    document.getElementById("asOf").textContent = "Data last pulled " + formatDateAtTime(latest.pulledAt);
+  }
+
+  // Looks up when the site itself was last actually redeployed (distinct
+  // from the data-pull timestamp above - see the GITHUB_REPO_API comment).
+  // Two calls: GitHub's Actions API doesn't accept "pages-build-deployment"
+  // as a workflow identifier, only its numeric id, and that id isn't
+  // something to hardcode - so first resolve the id by name, then fetch its
+  // latest successful run. Best-effort: this is read-only decoration, not
+  // core content, so any failure (rate limit, network) just leaves the line
+  // hidden rather than showing an error.
+  function renderPageDeploymentTime() {
+    fetch(GITHUB_REPO_API + "/actions/workflows")
+      .then(function (res) { if (!res.ok) throw new Error("workflows lookup failed"); return res.json(); })
+      .then(function (data) {
+        var deployWorkflow = (data.workflows || []).find(function (w) { return w.name === "pages-build-deployment"; });
+        if (!deployWorkflow) throw new Error("pages-build-deployment workflow not found");
+
+        return fetch(GITHUB_REPO_API + "/actions/workflows/" + deployWorkflow.id + "/runs?per_page=1&status=success");
+      })
+      .then(function (res) { if (!res.ok) throw new Error("runs lookup failed"); return res.json(); })
+      .then(function (data) {
+        var latestRun = (data.workflow_runs || [])[0];
+        if (!latestRun) throw new Error("no successful deployment run found");
+
+        var deployedAt = new Date(latestRun.updated_at);
+        var el = document.getElementById("pageUpdatedAt");
+        el.textContent = "Page last updated " + formatDateAtTime(deployedAt);
+        el.hidden = false;
+      })
+      .catch(function () {
+        // Leave #pageUpdatedAt hidden - the data-pull timestamp above still
+        // renders fine on its own.
+      });
   }
 
   // ---------- line chart (hand-rolled SVG, no dependencies) ----------
@@ -896,6 +937,7 @@
     .then(function (rawHistory) {
       var history = normalizeHistory(rawHistory);
       renderMasthead(history);
+      renderPageDeploymentTime();
       renderFixedKpiRow(history);
 
       var rangeSelect = document.getElementById("rangeSelect");

@@ -279,6 +279,22 @@ All paths below are relative to `scripts/` unless stated otherwise.
   - Verified end-to-end with headless Chromium's `page.pdf()` across iterations: 7 pages → 5 (surface
     color + compaction) → 4 (age/gender chart cap) — Overview 2pp (by far the most content: 7 KPI
     tiles, 2 charts, 10 post cards), Audience 1pp, Collabs 1pp.
+- **Two separate timestamps under the masthead**, deliberately not merged into one - they answer
+  different questions and are always somewhat apart in practice:
+  - `#asOf` ("Data last pulled on…") is `latest.pulledAt` from the fetched history - when
+    `pullData.py` actually ran.
+  - `#pageUpdatedAt` ("Page last updated on…") is when GitHub Pages *finished redeploying* that data,
+    fetched client-side from GitHub's public Actions API (`renderPageDeploymentTime()`): a data pull
+    commits `statsHistory.json`, which *triggers* the `pages-build-deployment` workflow, but that
+    deployment then takes its own ~30–90s (observed up to ~30min under queue load) to actually finish
+    and go live - conflating the two read as flatly wrong the one time a user actually checked (the
+    page said "updated" at the pull time, while the visible data had in fact gone live half an hour
+    later). Two API calls, chained: `pages-build-deployment`'s numeric workflow id isn't something to
+    hardcode, so it's resolved by name via `/actions/workflows` first, then its latest successful run
+    is fetched via `/actions/workflows/{id}/runs?status=success`. Public unauthenticated GitHub REST
+    calls are CORS-enabled and need no token, but are rate-limited to 60/hour per IP - acceptable for a
+    low-traffic media kit; on any failure (rate limit, network) `#pageUpdatedAt` just stays `hidden`
+    rather than showing an error, since this is read-only decoration, not core content.
 - Live at `https://kelstudy.github.io/DiaryOfBeth/` via GitHub Pages (Settings → Pages → Deploy from
   branch → `main` / `(root)`).
 
