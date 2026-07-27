@@ -537,8 +537,9 @@
       return (b.engagementRate || 0) - (a.engagementRate || 0);
     }).slice(0, topN);
 
+    var topNLabel = topN >= 9999 ? "all pulled posts" : "top " + topN;
     document.getElementById("postsSub").textContent =
-      "By engagement rate, " + formatRangeWindowLabel(rangeValue);
+      "By engagement rate, " + topNLabel + ", " + formatRangeWindowLabel(rangeValue);
 
     if (!posts.length) {
       var empty = document.createElement("p");
@@ -853,6 +854,19 @@
 
   function setupPdfDownload() {
     var button = document.getElementById("downloadPdfBtn");
+
+    // The Time range <select> itself is hidden in print (a live dropdown
+    // control looks out of place in a static document) - swap in its
+    // current selection as plain text just before the print dialog opens,
+    // via the .print-only-value sibling that's only shown in print.
+    var rangeSelect = document.getElementById("rangeSelect");
+    var rangePrintValue = document.getElementById("rangeSelectPrintValue");
+    window.addEventListener("beforeprint", function () {
+      if (rangeSelect && rangePrintValue) {
+        rangePrintValue.textContent = "Time range: " + rangeSelect.options[rangeSelect.selectedIndex].text;
+      }
+    });
+
     if (!button) return;
     // window.print() with the @media print rules in dashboard.css does the
     // actual work: forces all three tabs visible with page breaks between

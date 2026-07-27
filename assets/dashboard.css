@@ -83,10 +83,12 @@ body {
   flex-wrap: wrap;
 }
 
-.print-only-heading {
+.print-only-heading,
+.print-only-value {
   /* Only rendered in the printed/PDF output - see the @media print block.
-     On screen the tab nav already labels each panel, so this would be a
-     redundant duplicate heading. */
+     On screen the tab nav already labels each panel (print-only-heading),
+     and the Time range select already shows its own value as a live
+     control (print-only-value), so these would be redundant duplicates. */
   display: none;
 }
 
@@ -689,9 +691,19 @@ body {
    whichever tab happened to be open on screen - so every panel's [hidden]
    is forced visible here regardless of the tab JS state, with a page break
    between each so they read as separate sections rather than one run-on
-   page. Brand colors are forced to actually print (browsers strip
-   background colors/gradients by default) since the whole point of a
-   "media kit" PDF is that it still looks on-brand once forwarded. */
+   page.
+
+   This is a genuinely separate visual treatment from the on-screen theme,
+   not the same page with a background swap: the saturated pink page-plane
+   looks like the brand on a backlit screen, but as large flat printed
+   fills (especially the empty leftover space below shorter sections) it
+   reads as unfinished/unprofessional rather than on-brand. Print swaps the
+   surface roles to white/near-white (keeping the pink only as small
+   accents - the explainer's left bar, rate-price/post-type text, the
+   print-only headings) and lands in landscape with substantially tighter
+   type and spacing throughout, aiming to fit each section in as few pages
+   as its actual content allows rather than the screen's touch-friendly
+   sizing. */
 @media print {
   * {
     -webkit-print-color-adjust: exact;
@@ -699,7 +711,17 @@ body {
   }
 
   @page {
-    margin: 1.5cm;
+    size: A4 landscape;
+    margin: 1cm;
+  }
+
+  :root {
+    /* Neutral print surfaces - see the block comment above for why this
+       isn't just the screen theme with color-adjust forced on. */
+    --page-plane: #ffffff;
+    --surface-1: #ffffff;
+    --surface-2: #fdf1f5;
+    --border: rgba(26, 18, 20, 0.16);
   }
 
   body {
@@ -709,16 +731,26 @@ body {
   .page {
     max-width: 100%;
     padding: 0;
+    font-size: 11px;
   }
 
   /* Anything only meaningful as an on-screen interaction - the PDF trigger
      itself, the clickable tab nav (all panels print together, so tabs have
-     nothing left to switch), and a hover-only tooltip that has no business
-     appearing on a static page. */
+     nothing left to switch), a hover-only tooltip that has no business
+     appearing on a static page, and the footer's GitHub source link (not
+     useful to a brand recipient). */
   .no-print,
   .tab-nav,
-  .chart-tooltip {
+  .chart-tooltip,
+  .page-footer {
     display: none !important;
+  }
+
+  .print-only-value {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
   }
 
   /* Override the hidden attribute setupTabs() uses to show only the active
@@ -736,10 +768,72 @@ body {
 
   .print-only-heading {
     display: block;
-    font-size: 20px;
+    font-size: 15px;
     font-weight: 800;
-    margin: 0 0 16px;
+    margin: 0 0 8px;
   }
+
+  /* ---- Global compaction - every role below gets a much smaller,
+     denser treatment than its touch-friendly screen sizing. ---- */
+
+  .masthead h1 { font-size: 17px; }
+  .subtitle { font-size: 11px; }
+  .asof { margin: 6px 0 10px; font-size: 10px; }
+
+  .explainer { padding: 8px 10px 8px 13px; margin-bottom: 10px; }
+  .explainer h2 { font-size: 10px; margin-bottom: 3px; }
+  .explainer p { font-size: 10px; line-height: 1.4; }
+
+  .section-heading { margin: 4px 0 8px; }
+  .section-heading h2 { font-size: 12px; }
+
+  .kpi-row { gap: 6px; margin-bottom: 10px; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+  .stat-tile { padding: 7px 9px; border-radius: 6px; }
+  .stat-label { font-size: 8px; margin-bottom: 3px; }
+  .stat-value { font-size: 16px; }
+  .stat-delta { font-size: 8px; margin-top: 2px; }
+
+  .chart-grid { gap: 8px; margin-bottom: 8px; }
+  .card { padding: 10px 12px; border-radius: 8px; }
+  .card-head h2 { font-size: 11px; }
+  .card-sub { font-size: 8px; margin: 1px 0 6px; }
+
+  .posts-card { margin-bottom: 0; }
+  .posts-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .post-card { padding: 7px 9px; }
+  .post-type { font-size: 8px; margin-bottom: 3px; }
+  .post-caption {
+    font-size: 9px;
+    margin-bottom: 6px;
+    -webkit-line-clamp: 1;
+  }
+  .post-stats { font-size: 8px; padding-top: 5px; }
+
+  .rank-list { gap: 4px; }
+  .rank-item { font-size: 9px; gap: 6px; }
+  .rank-item .rank-index { font-size: 8px; }
+
+  /* The age/gender chart is a lone full-width card on screen, which in
+     print's landscape width renders needlessly tall (its aspect ratio is
+     fixed via viewBox) and pushes the two rank-list cards below it to a
+     second page. Capping its width - height follows automatically since
+     the SVG scales by width:100%/height:auto - buys back most of a page. */
+  #ageGenderChart svg {
+    max-width: 480px;
+    margin: 0 auto;
+    display: block;
+  }
+
+  .rate-grid { gap: 6px; }
+  .rate-item { padding: 7px 9px; }
+  .rate-label { font-size: 8px; margin-bottom: 3px; }
+  .rate-price { font-size: 15px; margin-bottom: 4px; }
+  .rate-desc { font-size: 8px; }
+
+  .plain-list { font-size: 9px; line-height: 1.5; }
+  .contact-row .btn-outline,
+  .contact-row .btn-gradient { padding: 5px 10px; font-size: 9px; }
+  .contact-note { font-size: 8px; }
 
   /* Keep each unit intact rather than splitting across a page boundary. */
   .card,

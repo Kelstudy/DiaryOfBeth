@@ -64,7 +64,7 @@
 
       <div class="section-heading">
         <h2>Performance trends</h2>
-        <label class="filter-field">
+        <label class="filter-field no-print">
           <span>Time range</span>
           <select id="rangeSelect">
             <option value="1">Last day</option>
@@ -73,6 +73,7 @@
             <option value="30" selected>Last 30 days</option>
           </select>
         </label>
+        <p class="print-only-value" id="rangeSelectPrintValue"></p>
       </div>
 
       <section class="kpi-row" id="kpiRowFiltered" aria-label="Stats for selected range"></section>
@@ -103,7 +104,7 @@
             <h2>Top posts</h2>
             <p class="card-sub" id="postsSub">By engagement rate, within the selected time range</p>
           </div>
-          <label class="filter-field">
+          <label class="filter-field no-print">
             <span>Show top</span>
             <select id="topNSelect">
               <option value="5">5 posts</option>

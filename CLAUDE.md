@@ -252,12 +252,33 @@ All paths below are relative to `scripts/` unless stated otherwise.
   them, so the export is one complete document covering Overview/Audience/Collabs regardless of which
   tab was open when the button was clicked, not just a snapshot of the current view; adds a
   `.print-only-heading` per panel (hidden on screen, since the tab nav already labels each panel there)
-  so each section is still identifiable once the tab nav itself is hidden for print; forces
-  `print-color-adjust: exact` since browsers strip background colors/gradients by default and the
-  entire point of this export is that it still looks on-brand once forwarded as a file; and
+  so each section is still identifiable once the tab nav itself is hidden for print; and
   `break-inside: avoid` on cards/tiles so a stat tile or post card doesn't split across a page
-  boundary. Verified end-to-end with headless Chromium's `page.pdf()` — 7 pages, vector charts, brand
-  pink preserved, correct section breaks.
+  boundary.
+  - **Print gets its own visual treatment, not the screen theme with color-adjust forced on.** An
+    early version just forced the screen's saturated pink page-plane to print — technically on-brand,
+    but the empty leftover space below shorter sections rendered as large flat pink voids that read as
+    unfinished rather than professional (explicit user feedback). Fixed by overriding
+    `--page-plane`/`--surface-1`/`--surface-2`/`--border` to white/near-white **inside** the
+    `@media print` block (cascades through every component automatically, since they're all written
+    against those custom properties rather than hardcoded colors) — pink is kept only as small accents
+    (explainer left-bar, rate-price/post-type text, the print-only headings), plus
+    `print-color-adjust: exact` so those accents and the chart colors still actually print (browsers
+    strip background colors/gradients by default).
+  - **Landscape + aggressive compaction**, aiming to fit each tab in as few pages as its content
+    allows rather than the screen's touch-friendly sizing: `@page { size: A4 landscape; }`, and a large
+    block of print-only overrides shrinking font sizes, padding, and gaps across every component
+    (`.stat-tile`, `.card`, `.post-card`, `.rate-item`, `.rank-item`, etc.) well below their on-screen
+    values. The Time range `<select>` is hidden in print (a live dropdown looks out of place in a
+    static document) and replaced by a `.print-only-value` paragraph populated from the select's
+    current selection via a `beforeprint` listener in `dashboard.js` (`setupPdfDownload()`) — plain
+    text of the actual value, not a non-functional control. The age/gender bar chart (`#ageGenderChart
+    svg`) gets an explicit `max-width` in print specifically — as the one full-width standalone chart
+    (not a 2-up grid like the trend charts), its fixed aspect ratio otherwise renders it tall enough at
+    full landscape width to push the two rank-list cards below it onto a second page.
+  - Verified end-to-end with headless Chromium's `page.pdf()` across iterations: 7 pages → 5 (surface
+    color + compaction) → 4 (age/gender chart cap) — Overview 2pp (by far the most content: 7 KPI
+    tiles, 2 charts, 10 post cards), Audience 1pp, Collabs 1pp.
 - Live at `https://kelstudy.github.io/DiaryOfBeth/` via GitHub Pages (Settings → Pages → Deploy from
   branch → `main` / `(root)`).
 
