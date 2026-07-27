@@ -755,9 +755,16 @@ body {
 
 .contact-row {
   display: flex;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 10px;
+}
+
+.contact-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .contact-note {
@@ -937,6 +944,7 @@ body {
   .rate-desc { font-size: 8px; }
 
   .plain-list { font-size: 9px; line-height: 1.5; }
+  .contact-label { font-size: 9px; }
   .contact-row .btn-outline,
   .contact-row .btn-gradient { padding: 5px 10px; font-size: 9px; }
   .contact-note { font-size: 8px; }
