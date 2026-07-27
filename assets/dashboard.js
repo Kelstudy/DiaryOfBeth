@@ -603,6 +603,19 @@
       card.target = "_blank";
       card.rel = "noopener";
 
+      if (post.thumbnailUrl) {
+        var thumbEl = document.createElement("img");
+        thumbEl.className = "post-thumb";
+        thumbEl.src = post.thumbnailUrl;
+        thumbEl.alt = "";
+        thumbEl.loading = "lazy";
+        // Instagram Graph API media/thumbnail URLs are signed and expire -
+        // an older snapshot's link can 404 by the time this renders, so
+        // drop the element rather than show a broken-image icon.
+        thumbEl.onerror = function () { thumbEl.remove(); };
+        card.appendChild(thumbEl);
+      }
+
       var typeEl = document.createElement("div");
       typeEl.className = "post-type";
       typeEl.textContent = post.mediaType || "POST";

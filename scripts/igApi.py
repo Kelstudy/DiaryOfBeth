@@ -67,7 +67,8 @@ def pullMostRecentPosts(accessToken, userId, postCount):
     """
     mediaFields = (
         "id,caption,media_type,media_product_type,"
-        "timestamp,permalink,like_count,comments_count"
+        "timestamp,permalink,like_count,comments_count,"
+        "media_url,thumbnail_url"
     )
 
     requestUrl = f"{BASE_URL}/{userId}/media"
@@ -110,7 +111,8 @@ def pullMediaSinceDate(accessToken, userId, cutoffDate):
     """
     mediaFields = (
         "id,caption,media_type,media_product_type,"
-        "timestamp,permalink,like_count,comments_count"
+        "timestamp,permalink,like_count,comments_count,"
+        "media_url,thumbnail_url"
     )
 
     requestUrl = f"{BASE_URL}/{userId}/media"

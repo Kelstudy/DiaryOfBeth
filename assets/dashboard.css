@@ -8,6 +8,27 @@
  * --brand-gradient used for chrome (buttons, avatar ring, tab indicator).
  */
 
+/* Manrope, self-hosted (no live Google Fonts CDN dependency) - used for
+   headings only. The 700 and 800 static weights are served from the same
+   variable-font file per subset, so one @font-face per subset covers both
+   weights; the browser picks the requested weight from the variable axis. */
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 700 800;
+  font-display: swap;
+  src: url("fonts/manrope-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 700 800;
+  font-display: swap;
+  src: url("fonts/manrope-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   color-scheme: light;
   --page-plane:     #f6c9d8;
@@ -108,6 +129,7 @@ body {
   flex-shrink: 0;
   padding: 3px;
   background: var(--brand-gradient);
+  box-shadow: 0 4px 14px var(--brand-glow), 0 1px 3px rgba(26, 18, 20, 0.15);
 }
 
 .avatar {
@@ -122,8 +144,9 @@ body {
 
 .masthead h1 {
   margin: 0;
+  font-family: "Manrope", system-ui, sans-serif;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.01em;
 }
 
@@ -255,6 +278,7 @@ body {
 
 .section-heading h2 {
   margin: 0;
+  font-family: "Manrope", system-ui, sans-serif;
   font-size: 16px;
   font-weight: 700;
 }
@@ -329,8 +353,9 @@ body {
 }
 
 .stat-value {
+  font-family: "Manrope", system-ui, sans-serif;
   font-size: 28px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.1;
   font-variant-numeric: proportional-nums;
 }
@@ -384,8 +409,9 @@ body {
 
 .card-head h2 {
   margin: 0;
+  font-family: "Manrope", system-ui, sans-serif;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .card-sub {
@@ -470,6 +496,16 @@ body {
   border-color: rgba(214, 41, 118, 0.5);
   box-shadow: var(--shadow-hover);
   transform: translateY(-2px);
+}
+
+.post-thumb {
+  display: block;
+  width: calc(100% + 28px);
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  margin: -14px -14px 12px;
+  border-radius: 10px 10px 0 0;
+  background: var(--surface-1);
 }
 
 .post-type {
@@ -833,6 +869,7 @@ body {
 
   .print-only-heading {
     display: block;
+    font-family: "Manrope", system-ui, sans-serif;
     font-size: 15px;
     font-weight: 800;
     margin: 0 0 8px;
@@ -866,6 +903,10 @@ body {
   .posts-card { margin-bottom: 0; }
   .posts-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .post-card { padding: 7px 9px; }
+  /* Dropped in print, not just shrunk - a signed thumbnail URL plus four
+     more images per row risks blowing the tuned one-page-per-tab layout,
+     and a printable media kit reads fine as text-only anyway. */
+  .post-thumb { display: none; }
   .post-type { font-size: 8px; margin-bottom: 3px; }
   .post-caption {
     font-size: 9px;

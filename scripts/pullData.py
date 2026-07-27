@@ -63,6 +63,7 @@ def buildPostRecord(mediaItem, followersCount, insightValues):
         "likeCount": mediaItem.get("like_count", 0),
         "commentsCount": mediaItem.get("comments_count", 0),
         "engagementRate": round(calculateEngagementRate(mediaItem, followersCount), 4),
+        "thumbnailUrl": mediaItem.get("thumbnail_url") or mediaItem.get("media_url"),
         "insights": insightValues,
     }
 

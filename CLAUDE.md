@@ -118,6 +118,9 @@ All paths below are relative to `scripts/` unless stated otherwise.
    - `calculateEngagementRate` = (likes + comments) / followers, as a percentage.
    - Note: `total_interactions` is the correct current metric name — `engagement` is not a valid
      field.
+   - `mediaFields` (used by both `pullMostRecentPosts` and `pullMediaSinceDate`) includes
+     `media_url,thumbnail_url` so the frontend can render real post thumbnails — see
+     `buildPostRecord`'s `thumbnailUrl` below.
 4. **`pullData.py`** — imports the pull functions from `igApi.py` and assembles them into a snapshot:
    - `promptForPullMode()` asks the user to choose exactly one of `"days"`, `"posts"`, or `"date"` mode
      and a value (`pullValue` is an int for `"days"`/`"posts"`, a `"YYYY-MM-DD"` string for `"date"`),
@@ -128,6 +131,14 @@ All paths below are relative to `scripts/` unless stated otherwise.
      for `"date"` — parsing `pullValue` into a midnight-UTC `cutoffDate`), then pulls insights and
      builds a full `buildPostRecord` for every post in it — all pulled posts get full detail, not just
      the first 10.
+   - `buildPostRecord`'s `thumbnailUrl` is `mediaItem.get("thumbnail_url") or mediaItem.get("media_url")`
+     — Reels/videos only populate `thumbnail_url`, photos/carousels populate `media_url` directly, so
+     the fallback picks whichever the media type actually returns. **Known risk, confirmed
+     acceptable**: these Graph API URLs are signed and expire — verified live that current-pull URLs
+     load fine, but older snapshots' stored URLs will eventually 404. The frontend handles this (see
+     Frontend section) by dropping the broken image rather than showing a broken-image icon; the grid
+     only ever renders the *latest* snapshot's posts anyway, so this only bites if the site goes
+     unpulled for a long stretch.
    - For the account-level reach / profile-views / content-views / new-followers calls (which each need
      a since/until range, not a post count or date), `"days"` mode uses `pullValue` directly; `"date"`
      mode computes days between `cutoffDate` and now; `"posts"` mode estimates the span via
@@ -179,6 +190,18 @@ All paths below are relative to `scripts/` unless stated otherwise.
   `index.html`. Replace that file to change the photo; no code change needed. It renders inside
   `.avatar-ring` (padding trick: gradient background peeking out as a ring) rather than having a
   gradient border directly, since `border` can't take a gradient value without `border-image` hacks.
+  Carries its own `box-shadow` (a soft `--brand-glow` bloom plus a tight dark contact shadow) so it
+  reads as the masthead's visual anchor rather than sitting flush with the page.
+- **Manrope** (self-hosted, weights 700/800 only) is used for headings/display text (`.masthead h1`,
+  `.section-heading h2`, `.card-head h2`, `.print-only-heading`, `.stat-value`) — body text stays on
+  the default system font stack. `.card-head h2`/`.stat-value` were bumped from their original 600
+  weight to 700 to actually land inside Manrope's declared 700–800 range (a weight outside a
+  `@font-face`'s declared range falls through to the next font in the stack instead of synthesizing
+  bold). Two woff2 files live at `assets/fonts/` (`manrope-latin.woff2`, `manrope-latin-ext.woff2`) —
+  downloaded once from Google Fonts' CSS2 API rather than linked live, keeping the "no CDN dependency"
+  rule intact; confirmed live that Google serves the *same* variable-font file for both the 700 and
+  800 static weights per subset, so `font-weight: 700 800` on one `@font-face` per subset covers both
+  without needing four separate files.
 - Three surface tiers, not two: `--page-plane` (saturated pink, the body background), `--surface-1`
   (off-white, top-level cards), `--surface-2` (pale pink, nested chips *inside* an off-white card —
   post cards in the Top Posts grid, rate-card items in Collabs). Using page-plane pink again for those
@@ -221,6 +244,15 @@ All paths below are relative to `scripts/` unless stated otherwise.
   point, clamped so it can never render above the chart card), and a top-posts grid (range-filtered
   posts, sorted by `engagementRate` descending, capped at the selected top-N, linking out to the real
   permalink).
+- Post cards show a real thumbnail (`.post-thumb`, an `<img>` bled to the card's edges via negative
+  margins matching `.post-card`'s own padding) when `post.thumbnailUrl` is present — falls back to the
+  original text-only card layout for older snapshots pulled before this field existed (falsy check,
+  no schema migration needed). Since Instagram's media URLs are signed and expire (see
+  `buildPostRecord` above), the `<img>` has an `onerror` handler that removes itself rather than
+  showing a broken-image icon — a graceful downgrade to the text-only card, not an error state.
+  Hidden entirely in `@media print` (`.post-thumb { display: none; }`) rather than shrunk — four extra
+  images per row risked blowing the tuned one-page-per-tab PDF layout, and a printable media kit reads
+  fine as text-only.
 - Charts render an empty-state message instead of a broken chart when there are fewer than 2 history
   points (true for a freshly-started history) — `renderLineChart` checks `points.length < 2` first.
 - **Light-only, pink-based (no dark-mode toggle)** — deliberate, per the brand aesthetic above, not an
