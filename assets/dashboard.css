@@ -354,6 +354,19 @@ body {
   margin-bottom: 24px;
 }
 
+/* A lone .card used as its own section (the Audience tab's age/gender
+   chart, the Collabs tab's rate card) has no bottom margin of its own,
+   and neither did .chart-grid have a top margin - so a chart-grid
+   immediately following one of these sat flush against it with a literal
+   0px gap ("Top countries"/"Top cities" and "What's included"/"Good to
+   know" reading as touching the box above). Scoped to this exact
+   adjacency (not a blanket .chart-grid margin-top) so it doesn't also
+   add unwanted extra space after a .kpi-row, which already supplies its
+   own gap before the chart-grid on the Overview tab. */
+.card + .chart-grid {
+  margin-top: 24px;
+}
+
 .card {
   background: var(--surface-1);
   border: 1px solid var(--border);
