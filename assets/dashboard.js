@@ -88,6 +88,12 @@
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
   }
 
+  function formatDateAtTime(date) {
+    var datePart = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    var timePart = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    return "on " + datePart + " at " + timePart;
+  }
+
   function truncateCaption(caption, maxLength) {
     if (!caption) return "(no caption)";
     var singleLine = caption.replace(/\n/g, " ").trim();
@@ -313,7 +319,7 @@
     if (profile.followersCount != null) metaParts.push(formatFullNumber(profile.followersCount) + " followers");
     document.getElementById("accountMeta").textContent = metaParts.join(" · ");
 
-    document.getElementById("asOf").textContent = "Last pulled " + formatDateFull(latest.pulledAt);
+    document.getElementById("asOf").textContent = "Page last updated " + formatDateAtTime(latest.pulledAt);
   }
 
   // ---------- line chart (hand-rolled SVG, no dependencies) ----------
