@@ -7,7 +7,10 @@ on:
   schedule:
     # Daily, not more frequent - a full N-day pull makes many API calls
     # (one insights call per post), so stay well within rate limits.
-    - cron: "0 7 * * *"
+    # Offset from the top of the hour - GitHub's scheduled-workflow queue is
+    # busiest exactly on the hour, which can delay or drop an on-the-hour
+    # cron by hours on free/public repos.
+    - cron: "17 7 * * *"
   workflow_dispatch:
     inputs:
       mode:
