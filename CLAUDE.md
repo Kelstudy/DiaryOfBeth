@@ -245,6 +245,19 @@ All paths below are relative to `scripts/` unless stated otherwise.
   visually obvious than a thin underline, per explicit feedback that the original underline tabs were
   too easy to miss. The active tab fills solid with `--brand-gradient` and white text rather than just
   changing an indicator line.
+- **PDF export** (`#downloadPdfBtn` in the masthead, `.no-print`) calls `window.print()` — no PDF
+  library, no server, just the browser's native print-to-PDF via a dedicated `@media print` block in
+  `dashboard.css`. That block: forces all three tab panels visible (`display: block !important`,
+  overriding the `hidden` attribute `setupTabs()` uses on screen) with `break-before: page` between
+  them, so the export is one complete document covering Overview/Audience/Collabs regardless of which
+  tab was open when the button was clicked, not just a snapshot of the current view; adds a
+  `.print-only-heading` per panel (hidden on screen, since the tab nav already labels each panel there)
+  so each section is still identifiable once the tab nav itself is hidden for print; forces
+  `print-color-adjust: exact` since browsers strip background colors/gradients by default and the
+  entire point of this export is that it still looks on-brand once forwarded as a file; and
+  `break-inside: avoid` on cards/tiles so a stat tile or post card doesn't split across a page
+  boundary. Verified end-to-end with headless Chromium's `page.pdf()` — 7 pages, vector charts, brand
+  pink preserved, correct section breaks.
 - Live at `https://kelstudy.github.io/DiaryOfBeth/` via GitHub Pages (Settings → Pages → Deploy from
   branch → `main` / `(root)`).
 

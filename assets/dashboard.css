@@ -76,6 +76,20 @@ body {
   gap: 16px;
 }
 
+.masthead-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.print-only-heading {
+  /* Only rendered in the printed/PDF output - see the @media print block.
+     On screen the tab nav already labels each panel, so this would be a
+     redundant duplicate heading. */
+  display: none;
+}
+
 .avatar-ring {
   width: 64px;
   height: 64px;
@@ -667,4 +681,72 @@ body {
 
 @media (max-width: 480px) {
   .stat-value { font-size: 22px; }
+}
+
+/* ---------- Print / PDF export ----------
+   Triggered by the "Download PDF" button (window.print() in dashboard.js).
+   The goal is one complete document covering all three tabs, not just
+   whichever tab happened to be open on screen - so every panel's [hidden]
+   is forced visible here regardless of the tab JS state, with a page break
+   between each so they read as separate sections rather than one run-on
+   page. Brand colors are forced to actually print (browsers strip
+   background colors/gradients by default) since the whole point of a
+   "media kit" PDF is that it still looks on-brand once forwarded. */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @page {
+    margin: 1.5cm;
+  }
+
+  body {
+    background-image: none;
+  }
+
+  .page {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  /* Anything only meaningful as an on-screen interaction - the PDF trigger
+     itself, the clickable tab nav (all panels print together, so tabs have
+     nothing left to switch), and a hover-only tooltip that has no business
+     appearing on a static page. */
+  .no-print,
+  .tab-nav,
+  .chart-tooltip {
+    display: none !important;
+  }
+
+  /* Override the hidden attribute setupTabs() uses to show only the active
+     tab on screen - print always shows all three. */
+  #tabOverview,
+  #tabAudience,
+  #tabCollabs {
+    display: block !important;
+  }
+
+  #tabAudience,
+  #tabCollabs {
+    break-before: page;
+  }
+
+  .print-only-heading {
+    display: block;
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0 0 16px;
+  }
+
+  /* Keep each unit intact rather than splitting across a page boundary. */
+  .card,
+  .stat-tile,
+  .post-card,
+  .rate-item,
+  .explainer {
+    break-inside: avoid;
+  }
 }

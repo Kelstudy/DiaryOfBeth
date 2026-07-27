@@ -849,7 +849,24 @@
     });
   }
 
+  // ---------- PDF export ----------
+
+  function setupPdfDownload() {
+    var button = document.getElementById("downloadPdfBtn");
+    if (!button) return;
+    // window.print() with the @media print rules in dashboard.css does the
+    // actual work: forces all three tabs visible with page breaks between
+    // them, and turns "Save as PDF" (or any printer) in the browser's print
+    // dialog into a one-shot static export brand teams can forward as a
+    // file rather than a link.
+    button.addEventListener("click", function () {
+      window.print();
+    });
+  }
+
   // ---------- boot ----------
+
+  setupPdfDownload();
 
   fetch(DATA_URL)
     .then(function (res) {

@@ -27,9 +27,12 @@
           <p class="subtitle" id="accountMeta">Loading live stats…</p>
         </div>
       </div>
-      <a id="profileLink" class="btn-gradient" href="https://instagram.com/thediaryofbeth" target="_blank" rel="noopener">
-        View on Instagram
-      </a>
+      <div class="masthead-actions">
+        <button type="button" class="btn-outline no-print" id="downloadPdfBtn">Download PDF</button>
+        <a id="profileLink" class="btn-gradient" href="https://instagram.com/thediaryofbeth" target="_blank" rel="noopener">
+          View on Instagram
+        </a>
+      </div>
     </header>
 
     <p class="asof" id="asOf"></p>
@@ -54,6 +57,8 @@
     </div>
 
     <div id="tabOverview" role="tabpanel" aria-labelledby="tabBtnOverview">
+
+      <h2 class="print-only-heading">Overview</h2>
 
       <section class="kpi-row" id="kpiRowFixed" aria-label="Current stats"></section>
 
@@ -116,6 +121,8 @@
 
     <div id="tabAudience" role="tabpanel" aria-labelledby="tabBtnAudience" hidden>
 
+      <h2 class="print-only-heading">Audience</h2>
+
       <section class="card">
         <div class="card-head">
           <h2>Age &amp; gender</h2>
@@ -154,6 +161,8 @@
       "PLACEHOLDER" to find every value that needs updating.
     -->
     <div id="tabCollabs" role="tabpanel" aria-labelledby="tabBtnCollabs" hidden>
+
+      <h2 class="print-only-heading">Collabs</h2>
 
       <section class="explainer">
         <h2>Interested in working together?</h2>
