@@ -25,6 +25,8 @@ from datetime import datetime, timedelta
 
 import requests
 
+from igApi import raiseForStatusWithDetails
+
 REFRESH_ENDPOINT = "https://graph.instagram.com/refresh_access_token"
 
 # Without an explicit timeout, requests waits forever on a stalled
@@ -50,7 +52,7 @@ def refreshAccessToken(currentAccessToken):
         params={"grant_type": "ig_refresh_token", "access_token": currentAccessToken},
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
-    response.raise_for_status()
+    raiseForStatusWithDetails(response)
     responseData = response.json()
     return responseData["access_token"], responseData["expires_in"]
 

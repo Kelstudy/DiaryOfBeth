@@ -7,6 +7,7 @@ cleanly.
 """
 
 import json
+import re
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -45,6 +46,41 @@ def loadToken(tokenPath="token.json"):
     return tokenRecord["accessToken"], tokenRecord["userId"]
 
 
+def redactAccessToken(text):
+    """Replace the value of any access_token=... query parameter in text."""
+    return re.sub(r"(access_token=)[^&\s'\"]+", r"\1REDACTED", str(text))
+
+
+def raiseForStatusWithDetails(response):
+    """
+    Drop-in replacement for response.raise_for_status() that is safe to run
+    in a public CI log.
+
+    requests' own HTTPError message embeds the full request URL, and every
+    call here carries the access token as a query parameter - so a plain
+    raise_for_status() prints the live token into the Actions log on any
+    failure. It also discards the response body, which is where Instagram
+    explains what was actually wrong (expired token, bad permissions, etc).
+    This raises the same exception type (so existing except clauses keep
+    working), with the token redacted and Instagram's own error message
+    included.
+    """
+    if response.ok:
+        return
+
+    try:
+        errorBody = response.json().get("error", {})
+        errorMessage = errorBody.get("message", response.text)
+    except (ValueError, AttributeError):
+        errorMessage = response.text
+
+    safeMessage = (
+        f"{response.status_code} error from {redactAccessToken(response.url)} - "
+        f"Instagram says: {redactAccessToken(errorMessage)}"
+    )
+    raise requests.exceptions.HTTPError(safeMessage, response=response)
+
+
 def pullProfile(accessToken, userId):
     """Pull basic profile fields."""
     profileFields = "id,username,account_type,followers_count,follows_count,media_count"
@@ -54,7 +90,7 @@ def pullProfile(accessToken, userId):
         params={"fields": profileFields, "access_token": accessToken},
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
-    response.raise_for_status()
+    raiseForStatusWithDetails(response)
     return response.json()
 
 
@@ -82,7 +118,7 @@ def pullMostRecentPosts(accessToken, userId, postCount):
 
     while requestUrl and len(collectedItems) < postCount:
         response = requests.get(requestUrl, params=requestParams, timeout=REQUEST_TIMEOUT_SECONDS)
-        response.raise_for_status()
+        raiseForStatusWithDetails(response)
         responseData = response.json()
 
         collectedItems.extend(responseData.get("data", []))
@@ -127,7 +163,7 @@ def pullMediaSinceDate(accessToken, userId, cutoffDate):
 
     while requestUrl:
         response = requests.get(requestUrl, params=requestParams, timeout=REQUEST_TIMEOUT_SECONDS)
-        response.raise_for_status()
+        raiseForStatusWithDetails(response)
         responseData = response.json()
         pageCount += 1
 
