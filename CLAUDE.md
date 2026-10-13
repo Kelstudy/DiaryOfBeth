@@ -115,6 +115,14 @@ All paths below are relative to `scripts/` unless stated otherwise.
      live that all three work on this account. Returns a list of `{"dimensionValues": [...], "value"}`
      — `dimensionValues` order matches the requested breakdown fields (e.g. `["25-34", "F"]` for
      `"age,gender"`).
+   - `raiseForStatusWithDetails(response)` replaces `response.raise_for_status()` on the profile and
+     pagination calls (and in `refreshToken.py`). Plain `raise_for_status()` embeds the full request
+     URL — including `access_token=...` — in the exception message, which printed the live token into
+     the public Actions log on every failure, and it also discarded Instagram's own error body (the
+     part that says e.g. "Session has expired"). This raises the same `HTTPError` type with the token
+     redacted (`redactAccessToken`) and Instagram's message included. The workflow additionally
+     registers the token with `::add-mask::` (see Storage & automation), since GitHub only masks the
+     secret's full JSON string, not the `accessToken` value inside it.
    - `calculateEngagementRate` = (likes + comments) / followers, as a percentage.
    - Note: `total_interactions` is the correct current metric name — `engagement` is not a valid
      field.
